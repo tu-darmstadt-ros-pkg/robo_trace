@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<package format="2">
+
+  <name>robo_trace_core</name>
+  <description>A data recorder featuring privacy, integrity and authenticity.</description>
+
+  <version>0.0.0</version>
+  <license>TODO</license>
+
+  <maintainer email="max.schmidt.11@stud.tu-darmstadt.de">Max Schmidt</maintainer>
+  <author email="max.schmidt.11@stud.tu-darmstadt.de">Max Schmidt</author>
+
+  <!-- <url type="website">http://wiki.ros.org/black_box_recorder</url> -->
+
+  <buildtool_depend>catkin</buildtool_depend>
+  
+  <build_depend>libmongoclient-dev</build_depend>
+
+  <depend>roscpp</depend>
+  <depend version_gte="1.11.2">pluginlib</depend>
+  <depend>nodelet</depend>
+
+  <depend>ros_babel_fish</depend>
+  <depend>ddynamic_reconfigure</depend>
+  
+  <depend>robo_trace_plugin_interface</depend>
+
+  <export>
+    <nodelet plugin="${prefix}/nodelet_plugins.xml" />
+  </export>
+  
+</package>

@@ -1,0 +1,7 @@
+<library path="lib/librobo_trace_core">
+  
+  <class name="robo_trace_core/RoboTraceRecorderNodelet" type="robo_trace::RoboTraceRecorderNodelet" base_class_type="nodelet::Nodelet">
+    <description>The robo trace recorder nodelet.</description>
+  </class>
+
+</library>

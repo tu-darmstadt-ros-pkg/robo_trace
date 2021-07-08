@@ -1,0 +1,69 @@
+robo_trace:
+  
+  # Plugins
+  plugins:
+  
+    # List of pluginlib names
+    names:
+      # Load the OpenSSL plugin
+      - "robo_trace::RoboTraceOpenSSLPlugins"
+
+    settings:
+      # Config for the openssl plugin
+      openssl:
+        
+        openssl_hash_chain:
+          hashing_method: "SHA256"
+          result_storage_key: "hash"
+        
+        openssl_signature:
+          hashing_method: "SHA256"
+          input_store_key: "hash"
+          result_storage_key: "sig"
+
+        openssl_partial_encryption:
+          encryption_method: "SHA256"
+          encryption_targets: 
+            # For this message type encrypt the 'position' sub field as a whole 
+            "geometry_msgs-Pose":
+              - "position"
+            # One can also define targets more specifically.
+            # Note: the previous target does not affect this target, although Pose is a member of PoseStamped
+            "geometry_msgs-PoseStamped":
+              - "pose.position.x"
+              - "pose.position.y"
+            # Only encrypt the image itself, but leave metadata intact.
+            # "sensor_msgs-Image":
+            #  - "data"
+            # "sensor_msgs-PointCloud2":
+            #  - "data"
+
+  # Pipeline configuration
+  pipelines:
+
+    # List of all the pipelines
+    versions:
+      - "general"
+ 
+    matching:
+      # Selector for the "general" pipeline
+      general:
+        # Define a regex to match the topic agains
+        regex: '.*'
+        # Matching is done from highest to lowest priority
+        priority: 0
+ 
+    sequence:
+      # Pipeline stage sequence for "general" 
+      general: 
+        # Requires the "robo_trace_openssl_plugins" plugin to be loaded.
+        - "openssl_partial_encryption"
+        - "openssl_hash_chain"
+        - "openssl_signature"
+
+  connection:
+    port: 27017
+    host: "localhost"
+    attempts: 3
+
+    

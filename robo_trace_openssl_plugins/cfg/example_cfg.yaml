@@ -1,0 +1,87 @@
+robo_trace:
+  
+  # .....
+  # Some other stuff
+  # .....
+
+  openssh_crypto_plugin:
+    
+    # 
+    openssl_hash_chain:
+      #
+      hashing_method: "SHA256"
+      #
+      result_store_key: "hash_chain"
+
+    # 
+    openssl_signature:
+      # 
+      method: ""
+      #
+      result_store_key: "signature"
+      # 
+      input_store_key: "hash_chain"
+    
+    #
+    openssl_full_encryption:
+      #
+      encryption_method: "aes-256-cbc"
+
+    # 
+    openssl_keys:
+
+      robo_trace:
+        # Generate some random key pair. Currently only generation is supported.
+        generate: true
+
+      authority:
+        # 
+        key: ""
+
+      #  default:
+      #    # A name for this key 
+      #    name: "Primary Authority Key"
+      #    # 
+      #    regex: "*"
+      #    # 
+      #    key: ""
+
+      #  max:
+      #    # 
+      #   name: "Max's Magic Debugging Key"
+      #    # 
+      #    regex: "*"
+      #    #
+      #    key: "" 
+      
+    # TODO: Obsolete
+    openssl_partial_encryption:
+      lazy: false
+      versions: 
+        - "default"
+      matching:
+        default:
+          regex: '*'
+          priority: 0
+      settings:
+        default:
+          encryption_method: "SHA256"
+          encryption_targets: 
+            # For this message type encrypt the 'position' sub field as a whole 
+            "geometry_msgs/Pose":
+              - "position"
+            # One can also define targets more specifically.
+            # Note: the previous target does not affect this target, although Pose is a member of PoseStamped
+            "geometry_msgs/PoseStamped":
+              - "pose.position.x"
+              - "pose.position.y"
+            # Only encrypt the image itself, but leave metadata intact.
+            "sensor_msgs/Image":
+              - "data"
+            "sensor_msgs/PointCloud2":
+              - "data"
+          
+            
+
+   
+

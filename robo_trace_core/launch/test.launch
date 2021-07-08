@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+
+<launch>
+
+    <!-- Load in the configuration. -->
+    <rosparam command="load" file="$(find robo_trace_core)/cfg/example_cfg.yaml" subst_value="true"/>
+
+    <!-- Superordinate nodelet manager. -->
+    <node pkg="nodelet" type="nodelet" name="robo_trace_nodelet_manager" args="manager" output="screen" respawn="true"/>
+
+    <!--
+    <node pkg="nodelet" type="nodelet" name="recorder" args="load robo_trace_core/RoboTraceRecorderNodelet robo_trace_nodelet_manager" output="screen" respawn="true">
+        
+    </node>
+    -->
+    <node name="robo_trace" pkg="robo_trace_core" output="screen" type="robo_trace_node" respawn="true" />
+
+</launch>
