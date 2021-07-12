@@ -68,7 +68,7 @@ void OpenSSLHashChainForwardStage::process(MessageProcessingContext::Ptr& contex
     }
 
     // Feed in the current message
-    if(!EVP_DigestUpdate(hashing_context, context->getMessage()->getSerializedStreamData(), context->getMessage()->getSerializedStreamLength())) {
+    if(!EVP_DigestUpdate(hashing_context, context->getMessage()->getStreamData(), context->getMessage()->getStreamLength())) {
         context->setStatus(MessageProcessingContext::Status::ERROR, "Failed hashing in current message!");
         return;
     }  
