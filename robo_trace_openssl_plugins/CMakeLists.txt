@@ -55,6 +55,7 @@ set(
     include/${PROJECT_NAME}/chain/configuration.hpp
     include/${PROJECT_NAME}/chain/descriptor.hpp
     include/${PROJECT_NAME}/chain/forward.hpp
+    include/${PROJECT_NAME}/chain/validate.hpp
 
     include/${PROJECT_NAME}/signature/configuration.hpp
     include/${PROJECT_NAME}/signature/descriptor.hpp
@@ -79,6 +80,7 @@ set(
     src/chain/configuration.cpp
     src/chain/descriptor.cpp
     src/chain/forward.cpp
+    src/chain/validate.cpp
 
     src/signature/configuration.cpp
     src/signature/descriptor.cpp
