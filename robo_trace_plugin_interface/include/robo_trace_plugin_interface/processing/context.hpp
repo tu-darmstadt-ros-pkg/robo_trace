@@ -19,6 +19,12 @@ public:
         VALID,
         /** */
         ERROR,
+        /** 
+            If a validation pipeline is executed on the context and 
+            the message to be found non valid, this status code will
+            be set. 
+        */
+        INVALID
     };
 
     typedef std::shared_ptr<MessageProcessingContext> Ptr;
