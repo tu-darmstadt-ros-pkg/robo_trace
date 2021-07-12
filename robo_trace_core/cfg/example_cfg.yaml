@@ -41,21 +41,14 @@ robo_trace:
   # Pipeline configuration
   pipelines:
 
-    # List of all the pipelines
-    versions:
-      - "general"
- 
-    matching:
-      # Selector for the "general" pipeline
-      general:
-        # Define a regex to match the topic agains
-        regex: '.*'
-        # Matching is done from highest to lowest priority
-        priority: 0
- 
-    sequence:
-      # Pipeline stage sequence for "general" 
-      general: 
+    # Selector for the "general" pipeline
+    general:
+      # Define a regex to match the topic agains
+      regex: '.*'
+      # Matching is done from highest to lowest priority
+      priority: 0
+      # Stage sequence for this version
+      sequence:
         # Requires the "robo_trace_openssl_plugins" plugin to be loaded.
         - "openssl_partial_encryption"
         - "openssl_hash_chain"

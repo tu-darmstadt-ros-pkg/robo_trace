@@ -48,30 +48,29 @@ void PipelineConstructor::initialize(ros::NodeHandle& node_handle, ros::NodeHand
         Load the pipeline models from the configuration file.
     */
 
-    const ros::NodeHandle& pipeline_ns = ros::NodeHandle(private_node_handle, "pipelines");
-    const ros::NodeHandle& pipeline_matching_ns = ros::NodeHandle(pipeline_ns, "matching");
-    const ros::NodeHandle& pipeline_sequence_ns = ros::NodeHandle(pipeline_ns, "sequence");
+    XmlRpc::XmlRpcValue pipeline_models;
+    private_node_handle.getParam("pipelines", pipeline_models);
 
-    std::vector<std::string> variant_names;
-    pipeline_ns.getParam("versions", variant_names);
-    
-    for (const std::string& variant_name : variant_names) {
-        
-        // Should be node_ns/plugin_ns/descriptor_ns/matching/variant_name
-        const ros::NodeHandle& variant_matching_ns = ros::NodeHandle(pipeline_matching_ns, variant_name);
-      
-        int priority;
-        variant_matching_ns.getParam("priority", priority);
-       
-        std::string regex_string;
-        variant_matching_ns.getParam("regex", regex_string);
+    for(XmlRpc::XmlRpcValue::ValueStruct::const_iterator it_model = pipeline_models.begin(); it_model != pipeline_models.end(); ++it_model) { 
 
-        std::vector<std::string> sequence_names;
-        pipeline_sequence_ns.getParam(variant_name, sequence_names);
+        const std::string& pipeline_model_name = it_model->first;
+        const XmlRpc::XmlRpcValue& pipeline_model =  it_model->second;
         
+        if (pipeline_model.getType() != XmlRpc::XmlRpcValue::Type::TypeStruct) {
+             // TODO: Unexpected format.
+            ROS_INFO_STREAM("Unexpected format.");
+            continue;
+        }
+
+        int priority = pipeline_model["priority"];
+        std::string regex_string = pipeline_model["regex"];
+
+        const XmlRpc::XmlRpcValue& sequence_names = pipeline_model["sequence"];
         std::vector<ProcessingStageDescriptor::Ptr> sequence_descriptors;
 
-        for (const std::string& stage_name : sequence_names) {
+        for (size_t idx = 0; idx < sequence_names.size(); ++idx) {
+            
+            const std::string& stage_name = sequence_names[idx];
             
             std::unordered_map<std::string, ProcessingStageDescriptor::Ptr>::iterator matching_descriptors = descriptors.find(stage_name);
 
@@ -82,11 +81,12 @@ void PipelineConstructor::initialize(ros::NodeHandle& node_handle, ros::NodeHand
 
             const ProcessingStageDescriptor::Ptr& descriptor = matching_descriptors->second;
             sequence_descriptors.push_back(descriptor);
-
+ 
         }
 
-        PipelineDescriptor::Ptr pipeline_descriptor = std::make_shared<PipelineDescriptor>(variant_name, priority, std::regex(regex_string), sequence_descriptors);
+        PipelineDescriptor::Ptr pipeline_descriptor = std::make_shared<PipelineDescriptor>(pipeline_model_name, priority, std::regex(regex_string), sequence_descriptors);
         m_pipeline_descriptors.push_back(pipeline_descriptor);
+
 
     }
 
