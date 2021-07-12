@@ -10,7 +10,7 @@
 namespace robo_trace {
 
 OpenSSLHashChainForwardStage::OpenSSLHashChainForwardStage(const OpenSSLHashChainConfiguration::Ptr& configuration, const OpenSSLPluginKeyManager::Ptr& key_manager) 
-: ProcessingStage(ProcessingStage::Mode::FORWARD, "openssl_hash_chain"), m_configuration(configuration) {
+: ProcessingStage(ProcessingStage::Mode::FORWARD, "openssl_hash_chain_forward"), m_configuration(configuration) {
  
     hashing_context = EVP_MD_CTX_new();
     hashing_method = EVP_get_digestbyname(m_configuration->getHashingMehtodName().c_str());
@@ -88,16 +88,6 @@ void OpenSSLHashChainForwardStage::process(MessageProcessingContext::Ptr& contex
 
     context->getMetadata()->append(m_configuration->getHashingResultStorageKey(), hash_buffer, hash_buffer_length);
 
-    /*
-    std::stringstream ss;
-    
-    for(unsigned int i = 0; i < hash_buffer_length; ++i) {
-        ss << std::hex << std::setw(2) << std::setfill('0') << (int) hash_buffer[i];
-    }
-
-    // TODO: The storage field should be configurable. 
-    context->getMetadata()->append(m_configuration->getHashingResultStorageKey(), ss.str());
-    */
 }
 
 }

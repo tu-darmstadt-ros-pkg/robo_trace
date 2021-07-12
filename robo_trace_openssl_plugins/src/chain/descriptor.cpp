@@ -62,7 +62,7 @@ ProcessingStage::Ptr OpenSSLHashChainStageDescriptor::getStage(const ProcessingS
     switch(mode) {
 
         case ProcessingStage::Mode::FORWARD : 
-            return std::make_shared<OpenSSLHashChainProcessingStage>(m_configuration, m_key_manager);
+            return std::make_shared<OpenSSLHashChainForwardStage>(m_configuration, m_key_manager);
         
         // TODO: We need a validate stage too.
         default: 
