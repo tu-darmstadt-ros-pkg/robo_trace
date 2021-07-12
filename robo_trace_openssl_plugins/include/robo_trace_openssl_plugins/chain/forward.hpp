@@ -20,19 +20,19 @@ namespace robo_trace {
  * 
  * This is stage must be executed in a blocking fashion! Only one 
  */
-class OpenSSLHashChainProcessingStage final : public ProcessingStage {
+class OpenSSLHashChainForwardStage final : public ProcessingStage {
 
 public:
 
     /**
      * TODO
      */
-    OpenSSLHashChainProcessingStage(const OpenSSLHashChainConfiguration::Ptr& configuration, const OpenSSLPluginKeyManager::Ptr& key_manager);
+    OpenSSLHashChainForwardStage(const OpenSSLHashChainConfiguration::Ptr& configuration, const OpenSSLPluginKeyManager::Ptr& key_manager);
 
     /**
      * TODO
      */
-    virtual ~OpenSSLHashChainProcessingStage();
+    virtual ~OpenSSLHashChainForwardStage();
 
     /**
      * 

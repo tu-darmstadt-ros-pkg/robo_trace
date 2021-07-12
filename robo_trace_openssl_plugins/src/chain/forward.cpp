@@ -9,7 +9,7 @@
 
 namespace robo_trace {
 
-OpenSSLHashChainProcessingStage::OpenSSLHashChainProcessingStage(const OpenSSLHashChainConfiguration::Ptr& configuration, const OpenSSLPluginKeyManager::Ptr& key_manager) 
+OpenSSLHashChainForwardStage::OpenSSLHashChainForwardStage(const OpenSSLHashChainConfiguration::Ptr& configuration, const OpenSSLPluginKeyManager::Ptr& key_manager) 
 : ProcessingStage(ProcessingStage::Mode::FORWARD, "openssl_hash_chain"), m_configuration(configuration) {
  
     hashing_context = EVP_MD_CTX_new();
@@ -37,15 +37,15 @@ OpenSSLHashChainProcessingStage::OpenSSLHashChainProcessingStage(const OpenSSLHa
 
 }
 
-OpenSSLHashChainProcessingStage::~OpenSSLHashChainProcessingStage() {
+OpenSSLHashChainForwardStage::~OpenSSLHashChainForwardStage() {
     EVP_MD_CTX_free(hashing_context);
 }
 
-const OpenSSLHashChainConfiguration::Ptr& OpenSSLHashChainProcessingStage::getConfiguration() const {
+const OpenSSLHashChainConfiguration::Ptr& OpenSSLHashChainForwardStage::getConfiguration() const {
     return m_configuration;
 }
 
-void OpenSSLHashChainProcessingStage::process(MessageProcessingContext::Ptr& context) {
+void OpenSSLHashChainForwardStage::process(MessageProcessingContext::Ptr& context) {
     /*
         
         The official documentation on OpenSSL's EVP can be found here:
