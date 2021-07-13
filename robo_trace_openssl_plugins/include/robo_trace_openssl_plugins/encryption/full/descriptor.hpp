@@ -5,6 +5,8 @@
 #include <memory>
 // Ros
 #include <ros/ros.h>
+// BabelFish
+#include <ros_babel_fish/generation/description_provider.h> 
 // Project
 #include "robo_trace_plugin_interface/processing/descriptor.hpp"
 #include "robo_trace_openssl_plugins/key_manager.hpp"
@@ -18,9 +20,14 @@ class OpenSSLFullEncryptionStageDescriptor final : public ProcessingStageDescrip
 public:
 
     /**
-     * TODO
+     *
      */
     OpenSSLFullEncryptionStageDescriptor(const OpenSSLPluginKeyManager::Ptr& key_manager, const ros::NodeHandle& plugin_namespace);
+
+    /**
+     * 
+     */
+    OpenSSLFullEncryptionStageDescriptor(const OpenSSLPluginKeyManager::Ptr& key_manager, const ros::NodeHandle& plugin_namespace, const ros_babel_fish::DescriptionProvider::Ptr message_description_provider);
 
     /**
      * TODO
@@ -63,10 +70,14 @@ public:
 protected:
 
     /** */
-    OpenSSLPluginKeyManager::Ptr m_key_manager;
+    const OpenSSLPluginKeyManager::Ptr m_key_manager;
     /** */
-    OpenSSLFullEncryptionConfiguration::Ptr m_configuration;
-    
-};
+    const ros_babel_fish::DescriptionProvider::Ptr m_message_description_provider;
+
+    /** */
+    const OpenSSLFullEncryptionConfiguration::Ptr m_configuration;
+
+};  
+
 
 }   

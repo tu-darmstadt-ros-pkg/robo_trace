@@ -64,6 +64,7 @@ set(
     include/${PROJECT_NAME}/encryption/full/configuration.hpp
     include/${PROJECT_NAME}/encryption/full/descriptor.hpp
     include/${PROJECT_NAME}/encryption/full/forward.hpp
+    include/${PROJECT_NAME}/encryption/full/backward.hpp
 
     include/${PROJECT_NAME}/encryption/partial/configuration.hpp
     include/${PROJECT_NAME}/encryption/partial/descriptor.hpp
@@ -89,6 +90,7 @@ set(
     src/encryption/full/configuration.cpp
     src/encryption/full/descriptor.cpp
     src/encryption/full/forward.cpp
+    src/encryption/full/backward.cpp
 
     src/encryption/partial/configuration.cpp
     src/encryption/partial/descriptor.cpp
