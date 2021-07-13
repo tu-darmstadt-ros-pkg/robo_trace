@@ -6,12 +6,10 @@
 #include "robo_trace_plugin_interface/config.h"
 #include <mongo/bson/bsonobjbuilder.h>
 
-#include <ros/console.h>
 
 namespace robo_trace {
-
  
-OpenSSLFullEncryptionProcessingStage::OpenSSLFullEncryptionProcessingStage(const OpenSSLFullEncryptionConfiguration::Ptr& configuration, const OpenSSLPluginKeyManager::Ptr& key_manager) 
+OpenSSLFullEncryptionForwardStage::OpenSSLFullEncryptionForwardStage(const OpenSSLFullEncryptionConfiguration::Ptr& configuration, const OpenSSLPluginKeyManager::Ptr& key_manager) 
 : ProcessingStage(ProcessingStage::Mode::FORWARD, "openssl_full_encryption"), m_configuration(configuration), m_key_manager(key_manager) {
 
     /*
@@ -45,21 +43,21 @@ OpenSSLFullEncryptionProcessingStage::OpenSSLFullEncryptionProcessingStage(const
 
 }
   
-OpenSSLFullEncryptionProcessingStage::~OpenSSLFullEncryptionProcessingStage() {
+OpenSSLFullEncryptionForwardStage::~OpenSSLFullEncryptionForwardStage() {
     EVP_CIPHER_CTX_free(m_encryption_context);
 };
 
 
-const OpenSSLFullEncryptionConfiguration::Ptr OpenSSLFullEncryptionProcessingStage::getConfiguration() const {
+const OpenSSLFullEncryptionConfiguration::Ptr OpenSSLFullEncryptionForwardStage::getConfiguration() const {
     return m_configuration;
 }
 
-const OpenSSLPluginKeyManager::Ptr OpenSSLFullEncryptionProcessingStage::getKeyManager() const {
+const OpenSSLPluginKeyManager::Ptr OpenSSLFullEncryptionForwardStage::getKeyManager() const {
     return m_key_manager;
 }
 
 
-void OpenSSLFullEncryptionProcessingStage::process(MessageProcessingContext::Ptr& context) {
+void OpenSSLFullEncryptionForwardStage::process(MessageProcessingContext::Ptr& context) {
 
     if (!RAND_bytes((unsigned char*) &m_iv[0], 16)) {
         context->setStatus(MessageProcessingContext::Status::ERROR, "Could not sample random IV for message encryption.");

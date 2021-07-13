@@ -20,19 +20,19 @@ namespace robo_trace {
  * 
  * This is stage must be executed in a blocking fashion! Only one 
  */
-class OpenSSLFullEncryptionProcessingStage final : public ProcessingStage {
+class OpenSSLFullEncryptionForwardStage final : public ProcessingStage {
 
 public:
 
     /**
      * TODO
      */
-    OpenSSLFullEncryptionProcessingStage(const OpenSSLFullEncryptionConfiguration::Ptr& configuration, const OpenSSLPluginKeyManager::Ptr& key_manager);
+    OpenSSLFullEncryptionForwardStage(const OpenSSLFullEncryptionConfiguration::Ptr& configuration, const OpenSSLPluginKeyManager::Ptr& key_manager);
 
     /**
      * TODO
      */
-    virtual ~OpenSSLFullEncryptionProcessingStage();
+    virtual ~OpenSSLFullEncryptionForwardStage();
 
     /**
      * 
