@@ -57,6 +57,11 @@ public:
     const ros_babel_fish::BabelFishMessage::ConstPtr& getIngress() const;
 
     /**
+     *
+     */
+    void setIngress(const ros_babel_fish::BabelFishMessage::ConstPtr& ingress);
+
+    /**
      * 
      */
     size_t getSerializedStreamLength() const;
@@ -79,7 +84,7 @@ public:
 protected:
 
     /**  */
-    const ros_babel_fish::BabelFishMessage::ConstPtr m_ingress_message;
+    ros_babel_fish::BabelFishMessage::ConstPtr m_ingress_message;
     /** */
     mongo::BSONObj m_serialized_message;
     

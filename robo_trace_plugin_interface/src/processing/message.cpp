@@ -11,6 +11,7 @@ Message::Message(const ros_babel_fish::BabelFishMessage::ConstPtr ingress_messag
 
 Message::~Message() = default;
 
+
 size_t Message::getStreamLength() const {
     if (m_serialized_message.isEmpty()) {
         return getIngressStreamLength();
@@ -27,6 +28,7 @@ const uint8_t* const Message::getStreamData() const {
     }
 }
 
+
 size_t Message::getIngressStreamLength() const {
     return m_ingress_message->size();
 }
@@ -35,9 +37,15 @@ const uint8_t* const Message::getIngressStreamData() const {
     return m_ingress_message->buffer();
 }
 
+
 const ros_babel_fish::BabelFishMessage::ConstPtr& Message::getIngress() const {
     return m_ingress_message;
 }
+
+void Message::setIngress(const ros_babel_fish::BabelFishMessage::ConstPtr& ingress) {
+    m_ingress_message = ingress;
+}
+
 
 size_t Message::getSerializedStreamLength() const {
     return m_serialized_message.objsize();
@@ -46,6 +54,7 @@ size_t Message::getSerializedStreamLength() const {
 const uint8_t* const Message::getSerializedStreamData() const {
     return reinterpret_cast<const uint8_t*>(m_serialized_message.objdata());
 }
+
 
 const mongo::BSONObj& Message::getSerialized() const {
     return m_serialized_message;
