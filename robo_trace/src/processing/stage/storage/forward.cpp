@@ -58,7 +58,6 @@ void StorageForwardStage::process(const ProcessingContext::Ptr& context) {
 
     // Constructor for the message record.
     mongo::BSONObjBuilder builder;
-    builder.append("type", 1);
     builder.genOID();
     
     /*

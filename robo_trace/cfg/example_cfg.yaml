@@ -33,9 +33,9 @@ robo_trace:
         # Requires the "robo_trace_openssl_plugins" plugin to be loaded.
         #- "openssl_partial_encryption"
         #- "openssl_full_encryption"
-        #- "downsampling"
+        - "downsampling"
         - "basic_marshaller"
-        #- "blob_decoupling"
+        - "blob_decoupling"
         #- "openssl_hash_chain"
         #- "openssl_signature"
 
@@ -74,22 +74,22 @@ robo_trace:
 
     downsampling:
       targets:
-        capture_every_2nd:
-          # Match either against 'topic' or 'type' (message_type) 
-          matching: 'topic'
-          regex: '.*'
-          priority: 0
-          strategy: 'count'
-          # Leave 3 out
-          value: 1.0
-        capture_every_10sec:
+#        capture_every_2nd:
+#          # Match either against 'topic' or 'type' (message_type) 
+#          matching: 'topic'
+#          regex: '.*'
+#          priority: 0
+#          strategy: 'count'
+#          # Leave 3 out
+#          value: 1.0
+        capture_every_2sec:
           # Match either against 'topic' or 'type' (message_type) 
           matching: 'type'
           regex: '.*'
           priority: 1
           strategy: 'time'
-          # Capture every 60 seconds
-          value: 10.0
+          # Capture every 2 seconds
+          value: 2.0
 
     openssl_hash_chain:
       hashing_method: "SHA256"

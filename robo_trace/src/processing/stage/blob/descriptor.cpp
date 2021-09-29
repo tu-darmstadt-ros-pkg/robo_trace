@@ -20,7 +20,7 @@ BlobDecouplingStageDescriptor::BlobDecouplingStageDescriptor(const ConnectionOpt
 BlobDecouplingStageDescriptor::~BlobDecouplingStageDescriptor() = default;
     
 bool BlobDecouplingStageDescriptor::isModeSupported(const ProcessingMode mode) const  {
-    return mode == ProcessingMode::CAPTURE;
+    return mode == ProcessingMode::CAPTURE || mode == ProcessingMode::REPLAY;
 }
 
 std::optional<ProcessingStage::Ptr> BlobDecouplingStageDescriptor::getStage(const DataContainer::Ptr& summary, const ProcessingMode mode) {

@@ -7,11 +7,8 @@
 #include "robo_trace/storage/connector.hpp"
 #include "robo_trace/processing/context.hpp"
 
-#include <fstream>
-#include <iostream>
 
 namespace robo_trace {
-
 
 MessageLoader::MessageLoader(const ConnectionOptions::ConstPtr& connector_options, const std::optional<mongo::BSONObj>& structure_query, const std::string& collection_path, std::vector<ProcessingStage::Ptr>& pipeline, ros::CallbackQueueInterface* callback_queue, const std::optional<double>& time_start, const std::optional<double>& time_end)
 : m_connector_options(connector_options), m_query_structure(structure_query), m_collection_path(collection_path),
@@ -153,7 +150,7 @@ ros::CallbackInterface::CallResult MessageLoader::call() {
     query.obj = dirty_hacks.done();
     std::cout << "Query compiled: " << query.obj.jsonString() << std::endl;
 */
-
+    
     std::unique_ptr<mongo::DBClientCursor> message_cursor = m_connection->query(
         // ns
         m_collection_path, 
@@ -177,11 +174,6 @@ ros::CallbackInterface::CallResult MessageLoader::call() {
     while(message_cursor->more()) {
 
         mongo::BSONObj serialized_message = message_cursor->next();
-        
-        std::ofstream out("output.txt");
-        out << serialized_message.jsonString();
-        out.close();
-
         digest(serialized_message);
 
         m_time_last_batch_end = serialized_message["metadata"]["time"]._numberDouble();
@@ -210,66 +202,40 @@ void MessageLoader::digest(const mongo::BSONObj& serialized_message) {
     const DataContainer::Ptr metadata_container = std::make_shared<DataContainer>(metadata_serialized); 
 
     /*
-        Handle the message depending on the type.
+        Construct the processing context.
     */
 
-    switch (serialized_message["type"].numberInt()) {
-            
-        // Is reconfiguration request.
-        case 0: {
-            
-            /*
-                Pass the configuration request to the stages.
-                TODO: Remove - legacy stuff.
-            */
-
-            break;
-        }
-        // Is a message. 
-        case 1: {
-
-            /*
-                Construct the processing context.
-            */
-
-            const mongo::BSONObj& message_serialized = serialized_message["message"].Obj();
-            
-            const ProcessingContext::Ptr context = std::make_shared<ProcessingContext>(metadata_container);
-            context->setSerializedMessage(message_serialized);
-
-            /*
-                Process  the message.
-            */
-            
-            for (const ProcessingStage::Ptr& processing_stage : m_processing_pipeline) {
-                processing_stage->process(context);
-            }
-            
-            /*
-                Push messages to sink.
-            */
-
-            const std::optional<ros_babel_fish::BabelFishMessage::ConstPtr>& o_message_deserialized = context->getUnserializedMessage();
-
-            if (!o_message_deserialized) {
-                throw std::runtime_error("Message has reached final stage, but is not deserialized yet.");
-            }
-
-            const ros_babel_fish::BabelFishMessage::ConstPtr& message_deserialized = o_message_deserialized.value();
-            const double message_ingress = metadata_container->getDouble("time");
-            
-            std::pair<double, ros_babel_fish::BabelFishMessage::ConstPtr> entry = std::make_pair(message_ingress, message_deserialized);
-            m_message_queue.push(std::move(entry)); 
-
-            ++m_message_queue_size;
-
-            break;
-        }
-        default: 
-            throw std::runtime_error("Invalid element type.");
-
-    }
+    const mongo::BSONObj& message_serialized = serialized_message["message"].Obj();
     
+    const ProcessingContext::Ptr context = std::make_shared<ProcessingContext>(metadata_container);
+    context->setSerializedMessage(message_serialized);
+
+    /*
+        Process  the message.
+    */
+    
+    for (const ProcessingStage::Ptr& processing_stage : m_processing_pipeline) {
+        processing_stage->process(context);
+    }
+  
+    /*
+        Push messages to sink.
+    */
+
+    const std::optional<ros_babel_fish::BabelFishMessage::ConstPtr>& o_message_deserialized = context->getUnserializedMessage();
+
+    if (!o_message_deserialized) {
+        throw std::runtime_error("Message has reached final stage, but is not deserialized yet.");
+    }
+
+    const ros_babel_fish::BabelFishMessage::ConstPtr& message_deserialized = o_message_deserialized.value();
+    const double message_ingress = metadata_container->getDouble("time");
+    
+    std::pair<double, ros_babel_fish::BabelFishMessage::ConstPtr> entry = std::make_pair(message_ingress, message_deserialized);
+    m_message_queue.push(std::move(entry)); 
+
+    ++m_message_queue_size;
+ 
 }
 
 }
