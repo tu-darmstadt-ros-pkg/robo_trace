@@ -84,8 +84,9 @@ void RoboTracePlayer::initialize(int argc, char** argv) {
         TODO: Allow for injecting other constrains.
     */
 
-    MessageQuery structure_query;
-
+    std::optional<double> time_start = {};
+    std::optional<double> time_end = {};
+    
     if (m_options_player->m_time_start || m_options_player->m_time_duration) {
 
         std::optional<double> recording_start_time = getRecordStartTime(connection);
@@ -104,25 +105,14 @@ void RoboTracePlayer::initialize(int argc, char** argv) {
         double time_adjusted_start = recording_start_time.value_or(0) + m_options_player->m_time_start.value_or(0);
 
         if (m_options_player->m_time_start) {
-            structure_query.setFieldEqualGreaterThan("metadata.time", time_adjusted_start);
+            time_start = time_adjusted_start;
         }
 
         if (m_options_player->m_time_duration) {
-            structure_query.setFieldLessThan("metadata.time", time_adjusted_start + m_options_player->m_time_duration.value());
+            time_end = time_adjusted_start + m_options_player->m_time_duration.value();
         }
 
     }
-
-    mongo::BSONObjBuilder mongo_structure_query_builder;
-    //structure_query.serialize(mongo_structure_query_builder);
-    // "allowDiskUse" : true
-    //mongo_structure_query_builder.append("allowDiskUse", true);
-    mongo::BSONObj mongo_structure_query = mongo_structure_query_builder.obj();
-
-    std::cout << "Query: " << mongo_structure_query.jsonString() << std::endl;
-
-    mongo::Query mongo_query(mongo_structure_query);  
-    mongo_query.sort("metadata.time", 1);
 
     /*
         Load topic specific publishers.
@@ -132,9 +122,10 @@ void RoboTracePlayer::initialize(int argc, char** argv) {
     // Fetch everything from the global summary collection.
     std::unique_ptr<mongo::DBClientCursor> recording_summary_cursor = connection->query(
         // ns
-        summary_collection_path,
+        summary_collection_path
         // query
-        mongo_query
+        // TODO: We could constrain the query i.e. by only considering topics that have messages after 
+        //  the start time or at least started after that time point.
     );
 
     std::cout << "Loading recording information. Topics to be played back are:" << std::endl;
@@ -172,14 +163,18 @@ void RoboTracePlayer::initialize(int argc, char** argv) {
             // connector
             m_options_connection,
             // query,
-            mongo_query,
+            std::nullopt,
             // collection
             collection_path,
             // pipeline
             pipeline_stages,
             // callback_queue
             // TODO: Don't use the global queue here.
-            (ros::CallbackQueueInterface*) ros::getGlobalCallbackQueue()
+            (ros::CallbackQueueInterface*) ros::getGlobalCallbackQueue(),
+            // start_time
+            time_start,
+            // end_time
+            time_end
         );
         loader->schedule();
 
@@ -346,7 +341,11 @@ void RoboTracePlayer::play() {
     ROS_INFO_STREAM("Starting publishing");
 
     while(!m_publishing_queue.empty()) {
-   
+        
+        if (!m_system_node_handle.ok()) {
+            return;
+        }
+
         const MessagePublisher::Ptr message_publisher = m_publishing_queue.top();
         m_publishing_queue.pop();
 

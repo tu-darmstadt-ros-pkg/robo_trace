@@ -59,6 +59,12 @@ void BasicMessageMarshallingBackwardStage::deserialize(const ros_babel_fish::Mes
         const ros_babel_fish::MessageTemplate::ConstPtr& sub_template = msg_template->compound.types[idx];
         const std::string& sub_template_name = msg_template->compound.names[idx];
 
+        // Probably the message definition changed. 
+        // TODO: 
+        if (!serialized.hasField(sub_template_name)) {
+            continue;
+        }
+
         const mongo::BSONElement serialized_element = serialized[sub_template_name];
 
         // https://github.com/StefanFabian/ros_babel_fish/blob/kinetic/ros_babel_fish/include/ros_babel_fish/generation/message_template.h

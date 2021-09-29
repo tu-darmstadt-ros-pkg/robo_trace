@@ -82,7 +82,7 @@ void PipelineConstructor::initialize(const ConnectionOptions::Ptr& connection_op
     descriptors[blob_decoupler->getName()] = blob_decoupler;
     
     ProcessingStageDescriptor::Ptr downsampler = std::make_shared<DownsamplingStageDescriptor>(stage_ns);
-    descriptors[blob_decoupler->getName()] = downsampler;
+    descriptors[downsampler->getName()] = downsampler;
    
     /*
         Load the pipeline models from the configuration file.

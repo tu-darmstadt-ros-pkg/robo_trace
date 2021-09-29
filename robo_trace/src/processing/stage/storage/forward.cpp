@@ -28,6 +28,21 @@ StorageForwardStage::StorageForwardStage(const DataContainer::Ptr& metadata, con
     
     // The connection is unique to this stage (, which is not executed concurrently!). 
     m_connection->insert(global_meta_store_path, builder.obj());
+
+    /*
+        Create the collection.
+    */
+
+    m_connection->createCollection(
+        // ns
+        m_message_store_path
+    );
+    m_connection->createIndex(
+        // ns
+        m_message_store_path,
+        // descriptor
+        BSON("metadata.time" << 1)
+    );
    
 }
 

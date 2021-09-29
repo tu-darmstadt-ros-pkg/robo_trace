@@ -33,9 +33,9 @@ robo_trace:
         # Requires the "robo_trace_openssl_plugins" plugin to be loaded.
         #- "openssl_partial_encryption"
         #- "openssl_full_encryption"
-        - "downsampling"
+        #- "downsampling"
         - "basic_marshaller"
-        - "blob_decoupling"
+        #- "blob_decoupling"
         #- "openssl_hash_chain"
         #- "openssl_signature"
 

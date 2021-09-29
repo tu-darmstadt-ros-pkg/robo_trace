@@ -35,7 +35,13 @@ public:
     /**
      *
      */
-    MessageLoader(const ConnectionOptions::ConstPtr& connection_options, const mongo::Query& query, const std::string& collection_path, std::vector<ProcessingStage::Ptr>& pipeline, ros::CallbackQueueInterface* callback_queue);
+    MessageLoader(const ConnectionOptions::ConstPtr& connection_options, 
+                  const std::optional<mongo::BSONObj>& structure_query, 
+                  const std::string& collection_path, 
+                  std::vector<ProcessingStage::Ptr>& pipeline, 
+                  ros::CallbackQueueInterface* callback_queue,
+                  const std::optional<double>& time_start,
+                  const std::optional<double>& time_end);
 
     /**
      *
@@ -60,7 +66,7 @@ public:
     /** 
      *
      */
-    size_t getQueryBufferUtilization() const;
+    size_t getQueryBufferingBatchSize() const;
 
     /**
      *
@@ -127,14 +133,11 @@ private:
     const std::vector<ProcessingStage::Ptr> m_processing_pipeline;
     
     /** */
-    std::optional<double> m_time_start;
+    const std::optional<double>& m_query_time_start;
     /** */
-    std::optional<double> m_time_end;
-
-    /** */
-    double m_time_current;
-    /** */
-    const mongo::Query& m_query; 
+    const std::optional<double>& m_query_time_end;
+     /** */
+    const std::optional<mongo::BSONObj>& m_query_structure; 
 
     /** */
     std::mutex m_scheduling_mutex;
@@ -150,15 +153,14 @@ private:
     
     /** */
     std::atomic<bool> m_execution_pending;
-  
     /** */
     std::atomic<bool> m_message_cursor_depleted;
-    /** The cursor over the result data. */
-    std::unique_ptr<mongo::DBClientCursor> m_message_cursor;
+    /** */
+    double m_time_last_batch_end;
+   
     /** */
     std::shared_ptr<mongo::DBClientConnection> m_connection;
         
-    
     /** */
     std::atomic<int> m_message_queue_size;
     /** */
