@@ -9,51 +9,51 @@
 #include <ros_babel_fish/generation/message_template.h>
 #include <ros_babel_fish/generation/description_provider.h> 
 // Project
-#include <robo_trace/processing/stage/descriptor.hpp>
+#include <robo_trace/processing/descriptor.hpp>
 #include <robo_trace_openssl_plugin/key_manager.hpp>
 #include <robo_trace_openssl_plugin/encryption/partial/configuration.hpp>
 
 
-namespace robo_trace { 
+namespace robo_trace::plugin::open_ssl { 
 
-class OpenSSLPartialEncryptionStageDescriptor final : public ProcessingStageDescriptor {
+class PartialEncryptionModuleDescriptor final : public robo_trace::processing::Descriptor {
 
 public:
 
     /**
      * TODO
      */
-    OpenSSLPartialEncryptionStageDescriptor(const OpenSSLPluginKeyManager::Ptr& key_manager, const ros::NodeHandle& stages_namespace);
+    PartialEncryptionModuleDescriptor(const KeyManager::Ptr& key_manager, const ros::NodeHandle& stages_namespace);
 
     /**
      *
      */
-    OpenSSLPartialEncryptionStageDescriptor(const OpenSSLPluginKeyManager::Ptr& key_manager, const ros::NodeHandle& stages_namespace, const ros_babel_fish::DescriptionProvider::Ptr message_description_provider);
+    PartialEncryptionModuleDescriptor(const KeyManager::Ptr& key_manager, const ros::NodeHandle& stages_namespace, const ros_babel_fish::DescriptionProvider::Ptr message_description_provider);
 
     /**
      * TODO
      */
-    virtual ~OpenSSLPartialEncryptionStageDescriptor();
+    virtual ~PartialEncryptionModuleDescriptor();
 
     /**
      * 
      */
-    virtual bool isModeSupported(const ProcessingMode mode) const final override;
+    virtual bool isModeSupported(const robo_trace::processing::Mode mode) const final override;
 
     /**
      * 
      */
-    virtual std::optional<ProcessingStage::Ptr> getStage(const DataContainer::Ptr& chain_metadata, const ProcessingMode mode) final override;
+    virtual std::optional<robo_trace::processing::Processor::Ptr> getStage(const robo_trace::store::Container::Ptr& chain_metadata, const robo_trace::processing::Mode mode) final override;
 
 protected:
 
     /** */
-    const OpenSSLPluginKeyManager::Ptr m_key_manager;
+    const KeyManager::Ptr m_key_manager;
      /** */
     const ros_babel_fish::DescriptionProvider::Ptr m_message_description_provider;
 
     /** */
-    OpenSSLPartialEncryptionConfiguration::Ptr m_configuration;
+    PartialEncryptionModuleConfiguration::Ptr m_configuration;
 
 
 };

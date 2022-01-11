@@ -1,5 +1,4 @@
 #pragma once
-
 // Std
 #include <string>
 #include <memory>
@@ -9,11 +8,12 @@
 // Babel Fish
 #include <ros_babel_fish/babel_fish.h>
 // Project
-#include "robo_trace/processing/stage/stage.hpp"
+#include "robo_trace/parameters.hpp"
+#include "robo_trace/processing/processor.hpp"
 #include "robo_trace/modes/capture/options.hpp"
 
 
-namespace robo_trace {
+namespace robo_trace::capture {
 
 class TopicPersistor {
 
@@ -27,7 +27,7 @@ public:
     /**
      * 
      */
-    TopicPersistor(const RecorderOptions::ConstPtr options_recorder, const std::vector<ProcessingStage::Ptr>& pipeline, ros::NodeHandle& node_handle, const std::string& topic);
+    TopicPersistor(const Options::ConstPtr options_recorder, const std::vector<robo_trace::processing::Processor::Ptr>& pipeline, ros::NodeHandle& node_handle, const std::string& topic);
 
 
     /**
@@ -43,7 +43,7 @@ public:
     /**
      * 
      */
-    const std::vector<ProcessingStage::Ptr>& getPipeline() const;
+    const std::vector<robo_trace::processing::Processor::Ptr>& getPipeline() const;
 
     /**
      * 
@@ -73,12 +73,12 @@ private:
     /** */
     const std::string m_topic;
     /** */
-    const RecorderOptions::ConstPtr m_options_recorder;
+    const Options::ConstPtr m_options_recorder;
 
     /** */
     ros::NodeHandle& m_node_handle;
     /** */
-    const std::vector<ProcessingStage::Ptr> m_pipeline;
+    const std::vector<robo_trace::processing::Processor::Ptr> m_pipeline;
     
     /** */
     uint32_t m_messages_received_local = 0;
@@ -90,6 +90,9 @@ private:
     /** */
     ros::Subscriber m_subscriber;
 
+#ifdef RECORDING_SIGNAL_PIPELINE_PASS
+    ros::Publisher m_publisher_signal_pipeline_pass;
+#endif
 
     
 };

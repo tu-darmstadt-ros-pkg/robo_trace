@@ -19,9 +19,9 @@
 
 #define STAGE_LOGGER_NAME "robo_trace_openssl_partial_encryption_backward"
 
-namespace robo_trace {
+namespace robo_trace::plugin::open_ssl {
 
-OpenSSLPartialEncryptionBackwardStage::OpenSSLPartialEncryptionBackwardStage(const OpenSSLPartialEncryptionConfiguration::Ptr& configuration, const OpenSSLPluginKeyManager::Ptr& key_manager, const ros_babel_fish::DescriptionProvider::Ptr& message_description_provider, const DataContainer::Ptr& metadata) 
+PartialEncryptionBackwardProcessor::PartialEncryptionBackwardProcessor(const PartialEncryptionModuleConfiguration::Ptr& configuration, const KeyManager::Ptr& key_manager, const ros_babel_fish::DescriptionProvider::Ptr& message_description_provider, const robo_trace::store::Container::Ptr& metadata) 
 : m_configuration(configuration), m_key_manager(key_manager) {
     ROS_INFO_STREAM("Construct.");
     /*
@@ -71,12 +71,12 @@ OpenSSLPartialEncryptionBackwardStage::OpenSSLPartialEncryptionBackwardStage(con
         Fetch the message description.
     */
 
-    std::unordered_map<std::string, OpenSSLPartialEncryptionConfiguration::EncryptionTarget::Ptr>& enrcyption_trees = m_configuration->getEncryptionTargetsTree();
+    std::unordered_map<std::string, PartialEncryptionModuleConfiguration::EncryptionTarget::Ptr>& enrcyption_trees = m_configuration->getEncryptionTargetsTree();
 
     std::string message_type_adjusted = message_type;
     std::replace(message_type_adjusted.begin(), message_type_adjusted.end(), '/', '-');
 
-    std::unordered_map<std::string, OpenSSLPartialEncryptionConfiguration::EncryptionTarget::Ptr>::const_iterator matches = enrcyption_trees.find(message_type_adjusted);    
+    std::unordered_map<std::string, PartialEncryptionModuleConfiguration::EncryptionTarget::Ptr>::const_iterator matches = enrcyption_trees.find(message_type_adjusted);    
 
     if (matches == enrcyption_trees.end()) {
         m_encryption_tree = nullptr;
@@ -116,13 +116,13 @@ OpenSSLPartialEncryptionBackwardStage::OpenSSLPartialEncryptionBackwardStage(con
 
 }
 
-OpenSSLPartialEncryptionBackwardStage::~OpenSSLPartialEncryptionBackwardStage() = default;
+PartialEncryptionBackwardProcessor::~PartialEncryptionBackwardProcessor() = default;
 
-ProcessingMode OpenSSLPartialEncryptionBackwardStage::getMode() const {
-    return ProcessingMode::REPLAY;
+robo_trace::processing::Mode PartialEncryptionBackwardProcessor::getMode() const {
+    return robo_trace::processing::Mode::REPLAY;
 }
  
-void OpenSSLPartialEncryptionBackwardStage::process(const ProcessingContext::Ptr& context) {
+void PartialEncryptionBackwardProcessor::process(const robo_trace::processing::Context::Ptr& context) {
    
     /*
         Load in the IV.
@@ -137,14 +137,13 @@ void OpenSSLPartialEncryptionBackwardStage::process(const ProcessingContext::Ptr
         Deserialize the message.
     */   
 
-    const std::optional<mongo::BSONObj>& o_serialized = context->getSerializedMessage();
+    const std::optional<bsoncxx::document::view>& o_serialized = context->getSerializedMessage();
 
     if (!o_serialized) {
-        throw std::runtime_error("Unserialized message not present.");
+        throw std::runtime_error("Serialized message not present.");
     }
 
-    const mongo::BSONObj& serialized = o_serialized.value();
-
+    const bsoncxx::document::view& serialized = o_serialized.value();
     ros_babel_fish::CompoundMessage::Ptr deserialized = std::make_shared<ros_babel_fish::CompoundMessage>(m_message_description->message_template);
     
     deserialize(m_message_description->message_template, serialized, *deserialized, m_encryption_tree);
@@ -159,20 +158,22 @@ void OpenSSLPartialEncryptionBackwardStage::process(const ProcessingContext::Ptr
    
 }
 
-void OpenSSLPartialEncryptionBackwardStage::deserialize(const ros_babel_fish::MessageTemplate::ConstPtr& msg_template, const mongo::BSONObj& serialized, ros_babel_fish::CompoundMessage& deserialized, OpenSSLPartialEncryptionConfiguration::EncryptionTarget::Ptr encryption_tree) {
+void PartialEncryptionBackwardProcessor::deserialize(const ros_babel_fish::MessageTemplate::ConstPtr& msg_template, const bsoncxx::document::view& serialized, ros_babel_fish::CompoundMessage& deserialized, PartialEncryptionModuleConfiguration::EncryptionTarget::Ptr encryption_tree) {
     
     for (size_t idx = 0; idx < msg_template->compound.names.size(); ++idx) {
         
         const ros_babel_fish::MessageTemplate::ConstPtr& sub_template = msg_template->compound.types[idx];
         const std::string& name = msg_template->compound.names[idx];
+
+        auto matches = serialized.find(name);
         
         // Probably the message definition changed. 
         // TODO: 
-        if (!serialized.hasField(name)) {
+        if (matches == serialized.end()) {
             continue;
         }
 
-        const mongo::BSONElement serialized_element = serialized.getField(name);
+        const bsoncxx::document::element serialized_element = *matches;
 
         // May need to encrypt this message.
         if (encryption_tree != nullptr &&
@@ -183,8 +184,9 @@ void OpenSSLPartialEncryptionBackwardStage::deserialize(const ros_babel_fish::Me
                 throw std::runtime_error("Failed to initialize EVP context!");
             }
 
-            int encrypted_legth;
-            const unsigned char* encrypted_data = (const unsigned char*) serialized_element.binData(encrypted_legth);
+            const bsoncxx::types::b_binary wrapper = serialized_element.get_binary();
+            const size_t encrypted_legth = wrapper.size;
+            const unsigned char* encrypted_data = (const unsigned char*) wrapper.bytes;
 
             // Trim or grow the decryption buffer to a fitting size.
             m_decryption_buffer.resize(encrypted_legth);
@@ -364,17 +366,17 @@ void OpenSSLPartialEncryptionBackwardStage::deserialize(const ros_babel_fish::Me
 
 }
 
-void OpenSSLPartialEncryptionBackwardStage::deserialize(const ros_babel_fish::MessageTemplate::ConstPtr& msg_template, const std::string& name, const mongo::BSONElement& serialized_element, ros_babel_fish::CompoundMessage& deserialized, OpenSSLPartialEncryptionConfiguration::EncryptionTarget::Ptr encryption_tree) {
+void PartialEncryptionBackwardProcessor::deserialize(const ros_babel_fish::MessageTemplate::ConstPtr& msg_template, const std::string& name, const bsoncxx::document::element& serialized_element, ros_babel_fish::CompoundMessage& deserialized, PartialEncryptionModuleConfiguration::EncryptionTarget::Ptr encryption_tree) {
    
     switch (msg_template->type) {
         
         case ros_babel_fish::MessageTypes::Compound: {
             
-            OpenSSLPartialEncryptionConfiguration::EncryptionTarget::Ptr sub_encryption_tree = nullptr;
+            PartialEncryptionModuleConfiguration::EncryptionTarget::Ptr sub_encryption_tree = nullptr;
 
             if (encryption_tree != nullptr) {
 
-                std::unordered_map<std::string, OpenSSLPartialEncryptionConfiguration::EncryptionTarget::Ptr>::const_iterator matches = encryption_tree->children.find(name);
+                std::unordered_map<std::string, PartialEncryptionModuleConfiguration::EncryptionTarget::Ptr>::const_iterator matches = encryption_tree->children.find(name);
 
                 // No targets under this component.
                 if (matches != encryption_tree->children.end()) {
@@ -383,82 +385,83 @@ void OpenSSLPartialEncryptionBackwardStage::deserialize(const ros_babel_fish::Me
 
             }
 
-            const mongo::BSONObj sub_serialized = serialized_element.Obj();
+            const bsoncxx::document::view sub_serialized = serialized_element.get_document().view();                  
             ros_babel_fish::CompoundMessage& sub_deserialized = deserialized.as<ros_babel_fish::CompoundMessage>()[name].as<ros_babel_fish::CompoundMessage>();
 
             deserialize(msg_template, sub_serialized, sub_deserialized, sub_encryption_tree);
+                
             break;
         }
 
         case ros_babel_fish::MessageTypes::Bool: {
-            deserialized[name].as<ros_babel_fish::ValueMessage<bool>>().setValue(serialized_element.boolean());
+            deserialized[name].as<ros_babel_fish::ValueMessage<bool>>().setValue(serialized_element.get_bool());
             break;
         }
         
         case ros_babel_fish::MessageTypes::UInt8: {
-            deserialized[name].as<ros_babel_fish::ValueMessage<uint8_t>>().setValue(static_cast<uint8_t>(serialized_element._numberInt()));
+            deserialized[name].as<ros_babel_fish::ValueMessage<uint8_t>>().setValue(static_cast<uint8_t>(serialized_element.get_int32()));
             break;
         }
         case ros_babel_fish::MessageTypes::UInt16: {
-            deserialized[name].as<ros_babel_fish::ValueMessage<uint16_t>>().setValue(static_cast<uint16_t>(serialized_element._numberInt()));
+            deserialized[name].as<ros_babel_fish::ValueMessage<uint16_t>>().setValue(static_cast<uint16_t>(serialized_element.get_int32()));
             break;
         }
         case ros_babel_fish::MessageTypes::UInt32: {
-            deserialized[name].as<ros_babel_fish::ValueMessage<uint32_t>>().setValue(static_cast<uint32_t>(serialized_element._numberInt()));
+            deserialized[name].as<ros_babel_fish::ValueMessage<uint32_t>>().setValue(static_cast<uint32_t>(serialized_element.get_int32()));
             break;
         }
         case ros_babel_fish::MessageTypes::UInt64: {
-            deserialized[name].as<ros_babel_fish::ValueMessage<uint64_t>>().setValue(static_cast<uint64_t>(serialized_element._numberLong()));
+            deserialized[name].as<ros_babel_fish::ValueMessage<uint64_t>>().setValue(static_cast<uint64_t>(serialized_element.get_int64()));
             break;
         }
 
         case ros_babel_fish::MessageTypes::Int8: {
-            deserialized[name].as<ros_babel_fish::ValueMessage<int8_t>>().setValue(static_cast<int8_t>(serialized_element._numberInt()));
+            deserialized[name].as<ros_babel_fish::ValueMessage<int8_t>>().setValue(static_cast<int8_t>(serialized_element.get_int32()));
             break;
         }
         case ros_babel_fish::MessageTypes::Int16: {
-            deserialized[name].as<ros_babel_fish::ValueMessage<int16_t>>().setValue(static_cast<int16_t>(serialized_element._numberInt()));
+            deserialized[name].as<ros_babel_fish::ValueMessage<int16_t>>().setValue(static_cast<int16_t>(serialized_element.get_int32()));
             break;
         }
         case ros_babel_fish::MessageTypes::Int32: {
-            deserialized[name].as<ros_babel_fish::ValueMessage<int32_t>>().setValue(static_cast<int32_t>(serialized_element._numberInt()));
+            deserialized[name].as<ros_babel_fish::ValueMessage<int32_t>>().setValue(static_cast<int32_t>(serialized_element.get_int32()));
             break;
         }
         case ros_babel_fish::MessageTypes::Int64: {
-            deserialized[name].as<ros_babel_fish::ValueMessage<int64_t>>().setValue(static_cast<int64_t>(serialized_element._numberLong()));
+            deserialized[name].as<ros_babel_fish::ValueMessage<int64_t>>().setValue(static_cast<int64_t>(serialized_element.get_int64()));
             break;
         }
 
         case ros_babel_fish::MessageTypes::Float32: {
-            deserialized[name].as<ros_babel_fish::ValueMessage<float>>().setValue(static_cast<float>(serialized_element._numberDouble()));
+            deserialized[name].as<ros_babel_fish::ValueMessage<float>>().setValue(static_cast<float>(serialized_element.get_double()));
             break;
         }
         case ros_babel_fish::MessageTypes::Float64: {
-            deserialized[name].as<ros_babel_fish::ValueMessage<double>>().setValue(static_cast<double>(serialized_element._numberDouble()));
+            deserialized[name].as<ros_babel_fish::ValueMessage<double>>().setValue(static_cast<double>(serialized_element.get_double()));
             break;
         }
 
         case ros_babel_fish::MessageTypes::String: {
-            deserialized[name].as<ros_babel_fish::ValueMessage<std::string>>().setValue(serialized_element.str());
+            deserialized[name].as<ros_babel_fish::ValueMessage<std::string>>().setValue(serialized_element.get_utf8().value.to_string());
             break;
         }
 
         case ros_babel_fish::MessageTypes::Time: {
             
-            const mongo::BSONObj serialized_time = serialized_element.Obj();
-            uint32_t secs = static_cast<uint32_t>(serialized_time["secs"]._numberInt());
-            uint32_t nsecs = static_cast<uint32_t>(serialized_time["nsecs"]._numberInt());
+            uint32_t secs = static_cast<uint32_t>(serialized_element["secs"].get_int32());
+            uint32_t nsecs = static_cast<uint32_t>(serialized_element["nsecs"].get_int32());
             
             deserialized[name].as<ros_babel_fish::ValueMessage<ros::Time>>().setValue(ros::Time(secs, nsecs));
+            
             break;
         }
         case ros_babel_fish::MessageTypes::Duration: {
             
-            const mongo::BSONObj serialized_duration = serialized_element.Obj();
-            int32_t secs = static_cast<int32_t>(serialized_duration["secs"]._numberInt());
-            int32_t nsecs = static_cast<int32_t>(serialized_duration["nsecs"]._numberInt());
+            int32_t secs = static_cast<int32_t>(serialized_element["secs"].get_int32());
+            int32_t nsecs = static_cast<int32_t>(serialized_element["nsecs"].get_int32());
             
             deserialized[name].as<ros_babel_fish::ValueMessage<ros::Duration>>().setValue(ros::Duration(secs, nsecs));
+            
             break;   
         }
 
@@ -469,21 +472,20 @@ void OpenSSLPartialEncryptionBackwardStage::deserialize(const ros_babel_fish::Me
                 case ros_babel_fish::MessageTypes::Bool: {
                     
                     ros_babel_fish::ArrayMessage<bool>& bool_array_message = deserialized[name].as<ros_babel_fish::ArrayMessage<bool>>();
-                    const mongo::BSONObj serialized_array = serialized_element.Obj();
-
-                    for(mongo::BSONObj::iterator elem_iterator = serialized_array.begin(); elem_iterator.more(); ) { 
-                        bool_array_message.append(static_cast<bool>(elem_iterator.next().boolean()));
+                    const bsoncxx::array::view serialized_array = serialized_element.get_array();
+                    
+                    for (const bsoncxx::array::element& array_element : serialized_array) {
+                        bool_array_message.append(static_cast<bool>(array_element.get_bool()));
                     }
 
                     break;
                 }
                 case ros_babel_fish::MessageTypes::UInt8: {
                     
-                    int data_byte_length;
-                    const uint8_t* data = (const uint8_t*) serialized_element.binData(data_byte_length);
+                    const bsoncxx::types::b_binary wrapper = serialized_element.get_binary();
 
-                    // szieof(int8_t) is 1. The compiler should optimize this away.
-                    int data_length = data_byte_length / sizeof(uint8_t);
+                    const int data_length = wrapper.size / sizeof(uint8_t);
+                    const uint8_t* data = (const uint8_t*) wrapper.bytes;
 
                     ros_babel_fish::ArrayMessage<uint8_t>& array_message = deserialized[name].as<ros_babel_fish::ArrayMessage<uint8_t>>(); 
                     array_message = ros_babel_fish::ArrayMessage<uint8_t>(data_length, array_message.isFixedSize(), data);
@@ -492,10 +494,10 @@ void OpenSSLPartialEncryptionBackwardStage::deserialize(const ros_babel_fish::Me
                 }
                 case ros_babel_fish::MessageTypes::UInt16: {
                     
-                    int data_byte_length;
-                    const uint8_t* data = (const uint8_t*) serialized_element.binData(data_byte_length);
+                    const bsoncxx::types::b_binary wrapper = serialized_element.get_binary();
 
-                    int data_length = data_byte_length / sizeof(uint16_t);
+                    const int data_length = wrapper.size / sizeof(uint16_t);
+                    const uint8_t* data = (const uint8_t*) wrapper.bytes;
 
                     ros_babel_fish::ArrayMessage<uint16_t>& array_message = deserialized[name].as<ros_babel_fish::ArrayMessage<uint16_t>>(); 
                     array_message = ros_babel_fish::ArrayMessage<uint16_t>(data_length, array_message.isFixedSize(), data);
@@ -504,10 +506,10 @@ void OpenSSLPartialEncryptionBackwardStage::deserialize(const ros_babel_fish::Me
                 }
                 case ros_babel_fish::MessageTypes::UInt32: {
 
-                    int data_byte_length;
-                    const uint8_t* data = (const uint8_t*) serialized_element.binData(data_byte_length);
+                    const bsoncxx::types::b_binary wrapper = serialized_element.get_binary();
 
-                    int data_length = data_byte_length / sizeof(uint32_t);
+                    const int data_length = wrapper.size / sizeof(uint32_t);
+                    const uint8_t* data = (const uint8_t*) wrapper.bytes;
 
                     ros_babel_fish::ArrayMessage<uint32_t>& array_message = deserialized[name].as<ros_babel_fish::ArrayMessage<uint32_t>>(); 
                     array_message = ros_babel_fish::ArrayMessage<uint32_t>(data_length, array_message.isFixedSize(), data);
@@ -516,10 +518,10 @@ void OpenSSLPartialEncryptionBackwardStage::deserialize(const ros_babel_fish::Me
                 }
                 case ros_babel_fish::MessageTypes::UInt64: {
 
-                    int data_byte_length;
-                    const uint8_t* data = (const uint8_t*) serialized_element.binData(data_byte_length);
+                    const bsoncxx::types::b_binary wrapper = serialized_element.get_binary();
 
-                    int data_length = data_byte_length / sizeof(uint64_t);
+                    const int data_length = wrapper.size / sizeof(uint64_t);
+                    const uint8_t* data = (const uint8_t*) wrapper.bytes;
 
                     ros_babel_fish::ArrayMessage<uint64_t>& array_message = deserialized[name].as<ros_babel_fish::ArrayMessage<uint64_t>>(); 
                     array_message = ros_babel_fish::ArrayMessage<uint64_t>(data_length, array_message.isFixedSize(), data);
@@ -528,11 +530,10 @@ void OpenSSLPartialEncryptionBackwardStage::deserialize(const ros_babel_fish::Me
                 }
                 case ros_babel_fish::MessageTypes::Int8: {
 
-                    int data_byte_length;
-                    const uint8_t* data = (const uint8_t*) serialized_element.binData(data_byte_length);
+                    const bsoncxx::types::b_binary wrapper = serialized_element.get_binary();
 
-                    // szieof(int8_t) is 1. The compiler should optimize this away.
-                    int data_length = data_byte_length / sizeof(int8_t);
+                    const int data_length = wrapper.size / sizeof(int8_t);
+                    const uint8_t* data = (const uint8_t*) wrapper.bytes;
 
                     ros_babel_fish::ArrayMessage<int8_t>& array_message = deserialized[name].as<ros_babel_fish::ArrayMessage<int8_t>>(); 
                     array_message = ros_babel_fish::ArrayMessage<int8_t>(data_length, array_message.isFixedSize(), data);
@@ -541,10 +542,10 @@ void OpenSSLPartialEncryptionBackwardStage::deserialize(const ros_babel_fish::Me
                 }
                 case ros_babel_fish::MessageTypes::Int16: {
 
-                    int data_byte_length;
-                    const uint8_t* data = (const uint8_t*) serialized_element.binData(data_byte_length);
+                    const bsoncxx::types::b_binary wrapper = serialized_element.get_binary();
 
-                    int data_length = data_byte_length / sizeof(int16_t);
+                    const int data_length = wrapper.size / sizeof(int16_t);
+                    const uint8_t* data = (const uint8_t*) wrapper.bytes;
 
                     ros_babel_fish::ArrayMessage<int16_t>& array_message = deserialized[name].as<ros_babel_fish::ArrayMessage<int16_t>>(); 
                     array_message = ros_babel_fish::ArrayMessage<int16_t>(data_length, array_message.isFixedSize(), data);
@@ -553,10 +554,10 @@ void OpenSSLPartialEncryptionBackwardStage::deserialize(const ros_babel_fish::Me
                 }
                 case ros_babel_fish::MessageTypes::Int32: {
 
-                    int data_byte_length;
-                    const uint8_t* data = (const uint8_t*) serialized_element.binData(data_byte_length);
+                    const bsoncxx::types::b_binary wrapper = serialized_element.get_binary();
 
-                    int data_length = data_byte_length / sizeof(int32_t);
+                    const int data_length = wrapper.size / sizeof(int32_t);
+                    const uint8_t* data = (const uint8_t*) wrapper.bytes;
 
                     ros_babel_fish::ArrayMessage<int32_t>& array_message = deserialized[name].as<ros_babel_fish::ArrayMessage<int32_t>>(); 
                     array_message = ros_babel_fish::ArrayMessage<int32_t>(data_length, array_message.isFixedSize(), data);
@@ -565,10 +566,10 @@ void OpenSSLPartialEncryptionBackwardStage::deserialize(const ros_babel_fish::Me
                 }
                 case ros_babel_fish::MessageTypes::Int64: {
 
-                    int data_byte_length;
-                    const uint8_t* data = (const uint8_t*) serialized_element.binData(data_byte_length);
+                    const bsoncxx::types::b_binary wrapper = serialized_element.get_binary();
 
-                    int data_length = data_byte_length / sizeof(int64_t);
+                    const int data_length = wrapper.size / sizeof(int64_t);
+                    const uint8_t* data = (const uint8_t*) wrapper.bytes;
 
                     ros_babel_fish::ArrayMessage<int64_t>& array_message = deserialized[name].as<ros_babel_fish::ArrayMessage<int64_t>>(); 
                     array_message = ros_babel_fish::ArrayMessage<int64_t>(data_length, array_message.isFixedSize(), data);
@@ -577,10 +578,10 @@ void OpenSSLPartialEncryptionBackwardStage::deserialize(const ros_babel_fish::Me
                 }
                 case ros_babel_fish::MessageTypes::Float32: {
 
-                    int data_byte_length;
-                    const uint8_t* data = (const uint8_t*) serialized_element.binData(data_byte_length);
+                    const bsoncxx::types::b_binary wrapper = serialized_element.get_binary();
 
-                    int data_length = data_byte_length / sizeof(float);
+                    const int data_length = wrapper.size / sizeof(float);
+                    const uint8_t* data = (const uint8_t*) wrapper.bytes;
 
                     ros_babel_fish::ArrayMessage<float>& array_message = deserialized[name].as<ros_babel_fish::ArrayMessage<float>>(); 
                     array_message = ros_babel_fish::ArrayMessage<float>(data_length, array_message.isFixedSize(), data);
@@ -589,10 +590,10 @@ void OpenSSLPartialEncryptionBackwardStage::deserialize(const ros_babel_fish::Me
                 }
                 case ros_babel_fish::MessageTypes::Float64: {
 
-                    int data_byte_length;
-                    const uint8_t* data = (const uint8_t*) serialized_element.binData(data_byte_length);
+                    const bsoncxx::types::b_binary wrapper = serialized_element.get_binary();
 
-                    int data_length = data_byte_length / sizeof(double);
+                    const int data_length = wrapper.size / sizeof(double);
+                    const uint8_t* data = (const uint8_t*) wrapper.bytes;
 
                     ros_babel_fish::ArrayMessage<double>& array_message = deserialized[name].as<ros_babel_fish::ArrayMessage<double>>(); 
                     array_message = ros_babel_fish::ArrayMessage<double>(data_length, array_message.isFixedSize(), data);
@@ -602,24 +603,23 @@ void OpenSSLPartialEncryptionBackwardStage::deserialize(const ros_babel_fish::Me
                 case ros_babel_fish::MessageTypes::String: {
                     
                     ros_babel_fish::ArrayMessage<std::string>& string_array_message = deserialized[name].as<ros_babel_fish::ArrayMessage<std::string>>(); 
-                    const mongo::BSONObj serialized_array = serialized_element.Obj();
-
-                    for(mongo::BSONObj::iterator elem_iterator = serialized_array.begin(); elem_iterator.more(); ) { 
-                        string_array_message.append(elem_iterator.next().str());
+                    const bsoncxx::array::view serialized_array = serialized_element.get_array();
+                    
+                    for (const bsoncxx::array::element& array_element : serialized_array) {
+                        string_array_message.append(array_element.get_utf8().value.to_string()); 
                     }
 
                     break;
                 }
                 case ros_babel_fish::MessageTypes::Time: {
-
+                    
                     ros_babel_fish::ArrayMessage<ros::Time>& time_array_message = deserialized[name].as<ros_babel_fish::ArrayMessage<ros::Time>>(); 
-                    const mongo::BSONObj serialized_array = serialized_element.Obj();
-
-                    for(mongo::BSONObj::iterator elem_iterator = serialized_array.begin(); elem_iterator.more(); ) { 
-
-                        const mongo::BSONObj serialized_time = elem_iterator.next().Obj();
-                        uint32_t secs = static_cast<uint32_t>(serialized_time["secs"]._numberInt());
-                        uint32_t nsecs = static_cast<uint32_t>(serialized_time["nsecs"]._numberInt());
+                    const bsoncxx::array::view serialized_array = serialized_element.get_array();
+                    
+                    for (const bsoncxx::array::element& array_element : serialized_array) {
+                        
+                        const uint32_t secs = static_cast<uint32_t>(array_element["secs"].get_int32());
+                        const uint32_t nsecs = static_cast<uint32_t>(array_element["nsecs"].get_int32());
                 
                         time_array_message.append(ros::Time(secs, nsecs));
 
@@ -630,13 +630,12 @@ void OpenSSLPartialEncryptionBackwardStage::deserialize(const ros_babel_fish::Me
                 case ros_babel_fish::MessageTypes::Duration: {
 
                     ros_babel_fish::ArrayMessage<ros::Duration>& time_array_message = deserialized[name].as<ros_babel_fish::ArrayMessage<ros::Duration>>(); 
-                    const mongo::BSONObj serialized_array = serialized_element.Obj();
-
-                    for(mongo::BSONObj::iterator elem_iterator = serialized_array.begin(); elem_iterator.more(); ) { 
-
-                        const mongo::BSONObj serialized_time = elem_iterator.next().Obj();
-                        int32_t secs = static_cast<int32_t>(serialized_time["secs"]._numberInt());
-                        int32_t nsecs = static_cast<int32_t>(serialized_time["nsecs"]._numberInt());
+                    const bsoncxx::array::view serialized_array = serialized_element.get_array();
+                    
+                    for (const bsoncxx::array::element& array_element : serialized_array) {
+                        
+                        const int32_t secs = static_cast<int32_t>(array_element["secs"].get_int32());
+                        const int32_t nsecs = static_cast<int32_t>(array_element["nsecs"].get_int32());
                 
                         time_array_message.append(ros::Duration(secs, nsecs));
                         
@@ -646,20 +645,18 @@ void OpenSSLPartialEncryptionBackwardStage::deserialize(const ros_babel_fish::Me
                 }
                 case ros_babel_fish::MessageTypes::Compound: {
                     
-                    
                     ros_babel_fish::CompoundArrayMessage& array_message = deserialized[name].as<ros_babel_fish::CompoundArrayMessage>(); 
-                    const mongo::BSONObj serialized_object_array = serialized_element.Obj();
-
+                    const bsoncxx::array::view serialized_array = serialized_element.get_array();
+                    
                     size_t idx = 0;
 
-                    for(mongo::BSONObj::iterator elem_iterator = serialized_object_array.begin(); elem_iterator.more(); ) { 
+                    for (const bsoncxx::array::element& array_element : serialized_array) {
                         
-                        
-                        OpenSSLPartialEncryptionConfiguration::EncryptionTarget::Ptr sub_encryption_tree = nullptr;
+                        PartialEncryptionModuleConfiguration::EncryptionTarget::Ptr sub_encryption_tree = nullptr;
 
                         if (encryption_tree != nullptr) {
 
-                            std::unordered_map<std::string, OpenSSLPartialEncryptionConfiguration::EncryptionTarget::Ptr>::const_iterator matches = encryption_tree->children.find(name);
+                            std::unordered_map<std::string, PartialEncryptionModuleConfiguration::EncryptionTarget::Ptr>::const_iterator matches = encryption_tree->children.find(name);
 
                             // No targets under this component.
                             if (matches != encryption_tree->children.end()) {
@@ -668,9 +665,10 @@ void OpenSSLPartialEncryptionBackwardStage::deserialize(const ros_babel_fish::Me
 
                         }
 
-                        const mongo::BSONObj serialized_object = elem_iterator.next().Obj();
-                       
+                        const bsoncxx::document::view serialized_object = array_element.get_document();
+
                         ros_babel_fish::Message& sub_message = array_message.isFixedSize() ? array_message[idx] : array_message.appendEmpty();
+                        // Should only be of compound type as primitives have their respective special case.
                         ros_babel_fish::CompoundMessage& sub_compound = sub_message.as<ros_babel_fish::CompoundMessage>();
 
                         deserialize(msg_template->array.element_template, serialized_object, sub_compound, sub_encryption_tree);

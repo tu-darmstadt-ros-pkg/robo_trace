@@ -6,33 +6,41 @@
 #include "robo_trace/util/smart_ptr_conversions.hpp"
 
 
-namespace robo_trace {
+namespace robo_trace::replay {
 
  
-MessagePublisher::MessagePublisher(ros_babel_fish::BabelFish& fish, ros::NodeHandle& node_handle, const PlayerOptions::ConstPtr& player_options, const MessageLoader::Ptr& loader, const DataContainer::Ptr& data) 
-: m_message_loader(loader), m_player_options(player_options), m_next_message_valid(false) {
+MessagePublisher::MessagePublisher(const MessageLoader::Ptr& loader, const robo_trace::store::Container::Ptr& data, ros_babel_fish::BabelFish& fish, ros::NodeHandle& node_handle, const std::string topic_prefix, const size_t topic_queue_size) 
+: m_message_loader(loader), m_next_message_valid(false) {
 
     /*
         Create a publisher for the topic.
     */
 
-    const std::string topic = m_player_options->m_topic_prefix + data->getString("topic");
+    const std::string topic = topic_prefix + data->getString("topic");
     const std::string message_type = data->getString("message_type");
 
     // TODO: Implement latching.
-    m_publisher = fish.advertise(node_handle, message_type, topic, m_player_options->m_topic_queue_size, true);
+    m_message_publisher = fish.advertise(node_handle, message_type, topic, topic_queue_size, true);
     
 }   
 
-MessagePublisher::~MessagePublisher() {
-    //
-}
+MessagePublisher::~MessagePublisher() = default;
 
 bool MessagePublisher::isBlocked() const {
-    // We are only blocked if each and every buffer is empty and if there is more data available. 
-    return !m_next_message_valid && 
-           m_message_loader->getDeserializationBufferUtilization() == 0 &&
-           m_message_loader->isBuffering(); 
+
+    // A message is cached for publication.
+    if (m_next_message_valid) {
+        return false;
+    }
+
+    // The loader is completed. We are not blocked, but finished.
+    if (m_message_loader->isCompleted()) {
+        return false;
+    }
+
+    // The loader maybe loading.
+    return !m_message_loader->isValid();
+   
 }
 
 bool MessagePublisher::isCompleted() const {
@@ -41,8 +49,8 @@ bool MessagePublisher::isCompleted() const {
   
 std::optional<double> MessagePublisher::getNextPublicationTime() {
     
-    getNextMessage();
-    //ROS_INFO_STREAM("Message valid: " << m_next_message_valid << " - " << m_publisher.getTopic() 
+    advance();
+    //ROS_INFO_STREAM("Message valid: " << m_next_message_valid << " - " << m_message_publisher.getTopic() 
     //                 << " - BU: " << m_message_loader->getDeserializationBufferUtilization() 
     //               << " - B: " << m_message_loader->isBuffering()
     //               << " - C: " << isCompleted());
@@ -82,32 +90,37 @@ void MessagePublisher::skip(uint32_t amount) {
         
     }
 
-    getNextMessage();
+    advance();
 
+}
+
+void MessagePublisher::reset(const double time) {
+    m_next_message_valid = false; 
+    m_message_loader->reset(time);
 }
   
 void MessagePublisher::publish() {
 
     // Fetch the next message if we haven't already (should actually never happen, because publish is invoked on the correct time only).
-    getNextMessage();
+    advance();
 
     // No more messages available 
     if (!m_next_message_valid) { 
         return;
     }
     
-    ROS_INFO_STREAM("Sending message to " << m_publisher.getTopic());
+    ROS_INFO_STREAM("Sending message to " << m_message_publisher.getTopic());
 
-    m_publisher.publish(m_next_message_data);
+    m_message_publisher.publish(m_next_message_data);
     m_next_message_valid = false;
     
     // Prepare the next message.
-    getNextMessage();
+    advance();
 
 }
     
-void MessagePublisher::getNextMessage() {
-
+void MessagePublisher::advance() {
+   
     if (m_next_message_valid) {
         return;
     }
@@ -130,7 +143,7 @@ void MessagePublisher::getNextMessage() {
         }
 
         m_next_message_valid = optional_message.has_value();
-
+       
     }
 }
 

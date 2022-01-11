@@ -1,42 +1,43 @@
 // Base
 #include "robo_trace/processing/context.hpp"
 
-namespace robo_trace {
 
-ProcessingContext::ProcessingContext()
-: ProcessingContext(std::make_shared<DataContainer>()) {
+namespace robo_trace::processing {
+
+Context::Context()
+: Context(std::make_shared<robo_trace::store::Container>()) {
     //
 }
 
-ProcessingContext::ProcessingContext(const DataContainer::Ptr& metadata)
+Context::Context(const robo_trace::store::Container::Ptr& metadata)
 : m_metadata(metadata),
   m_terminated(false) {
     //
 }
 
-ProcessingContext::~ProcessingContext() = default;
+Context::~Context() = default;
 
-const DataContainer::Ptr& ProcessingContext::getMetadata() const {
+const robo_trace::store::Container::Ptr& Context::getMetadata() const {
     return m_metadata;
 }
 
-bool ProcessingContext::isTerminated() const {
+bool Context::isTerminated() const {
     return m_terminated;
 }
 
-void ProcessingContext::setTerminated() {
+void Context::setTerminated() {
     m_terminated = true;
 }
 
-bool ProcessingContext::isUnserialized() const {
+bool Context::isUnserialized() const {
     return m_unserialized_message.has_value();
 }
 
-const std::optional<ros_babel_fish::BabelFishMessage::ConstPtr>& ProcessingContext::getUnserializedMessage() const {
+const std::optional<ros_babel_fish::BabelFishMessage::ConstPtr>& Context::getUnserializedMessage() const {
     return m_unserialized_message;
 }
 
-const std::optional<const uint8_t* const> ProcessingContext::getUnserializedMessage(size_t& length) const {
+const std::optional<const uint8_t*> Context::getUnserializedMessage(size_t& length) const {
     if (m_unserialized_message) {
 
         ros_babel_fish::BabelFishMessage::ConstPtr message = m_unserialized_message.value();
@@ -50,25 +51,25 @@ const std::optional<const uint8_t* const> ProcessingContext::getUnserializedMess
     }
 }
 
-void ProcessingContext::setUnserializedMessage(const ros_babel_fish::BabelFishMessage::ConstPtr& ingress) {
+void Context::setUnserializedMessage(const ros_babel_fish::BabelFishMessage::ConstPtr& ingress) {
     m_unserialized_message = ingress;
 }
 
-bool ProcessingContext::isSerialized() const {
+bool Context::isSerialized() const {
     return m_serialized_message.has_value();
 }
 
-const std::optional<mongo::BSONObj>& ProcessingContext::getSerializedMessage() const {
+const std::optional<bsoncxx::document::view>& Context::getSerializedMessage() const {
     return m_serialized_message;
 }
 
-const std::optional<const uint8_t* const> ProcessingContext::getSerializedMessage(size_t& length) const {
+const std::optional<const uint8_t* const> Context::getSerializedMessage(size_t& length) const {
     if (m_serialized_message) {
 
-        const mongo::BSONObj& metadata = m_serialized_message.value();
-        length = metadata.objsize();
-        
-        return reinterpret_cast<const uint8_t*>(metadata.objdata());
+        const bsoncxx::document::view& metadata = m_serialized_message.value();
+        length = metadata.length();
+
+        return metadata.data();
 
     } else {
         length = 0;
@@ -76,7 +77,13 @@ const std::optional<const uint8_t* const> ProcessingContext::getSerializedMessag
     }
 }
 
-void ProcessingContext::setSerializedMessage(const mongo::BSONObj& serialized) {
+void Context::setSerializedMessage(const bsoncxx::document::value& serialized) {
+    m_serialized_owning = serialized;
+    m_serialized_message = m_serialized_owning.value().view();
+}
+
+void Context::setSerializedMessage(const bsoncxx::document::view serialized) {
+    m_serialized_owning = {};
     m_serialized_message = serialized;
 }
 

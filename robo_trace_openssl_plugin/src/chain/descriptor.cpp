@@ -9,17 +9,16 @@
 #include "robo_trace_openssl_plugin/chain/validate.hpp"
 
 
-namespace robo_trace {
+namespace robo_trace::plugin::open_ssl {
 
-
-OpenSSLHashChainStageDescriptor::OpenSSLHashChainStageDescriptor(const OpenSSLPluginKeyManager::Ptr& key_manager, const ros::NodeHandle& stages_namespace) 
-: ProcessingStageDescriptor(stages_namespace, "openssl_hash_chain"), m_key_manager(key_manager) {
+HashChainStageModuleDescriptor::HashChainStageModuleDescriptor(const KeyManager::Ptr& key_manager, const ros::NodeHandle& stages_namespace) 
+: robo_trace::processing::Descriptor(stages_namespace, "openssl_hash_chain"), m_key_manager(key_manager) {
     
     /*
         Create and load the configuration.
     */
 
-    m_configuration = std::make_shared<OpenSSLHashChainConfiguration>();
+    m_configuration = std::make_shared<HashChainModuleConfiguration>();
 
     m_configuration->setHashingMethodName(m_handle.param<std::string>(
         ROS_PARAM_HASH_CHAIN_METHOD_NAME, 
@@ -33,21 +32,20 @@ OpenSSLHashChainStageDescriptor::OpenSSLHashChainStageDescriptor(const OpenSSLPl
 
 }
 
-OpenSSLHashChainStageDescriptor::~OpenSSLHashChainStageDescriptor() = default;
+HashChainStageModuleDescriptor::~HashChainStageModuleDescriptor() = default;
 
-bool OpenSSLHashChainStageDescriptor::isModeSupported(const ProcessingMode mode) const {
-    // Currently only FORWARD is implemented.
-    return ProcessingMode::CAPTURE == mode && ProcessingMode::VALIDATE == mode;
+bool HashChainStageModuleDescriptor::isModeSupported(const robo_trace::processing::Mode mode) const {
+    return robo_trace::processing::Mode::CAPTURE == mode || robo_trace::processing::Mode::VALIDATE == mode;
 }
 
-std::optional<ProcessingStage::Ptr> OpenSSLHashChainStageDescriptor::getStage(const DataContainer::Ptr& chain_metadata, const ProcessingMode mode) {
+std::optional<robo_trace::processing::Processor::Ptr> HashChainStageModuleDescriptor::getStage(const robo_trace::store::Container::Ptr& chain_metadata, const robo_trace::processing::Mode mode) {
     switch(mode) {
 
-        case ProcessingMode::CAPTURE : 
-            return std::make_shared<OpenSSLHashChainForwardStage>(m_configuration, m_key_manager, chain_metadata);
+        case robo_trace::processing::Mode::CAPTURE : 
+            return std::make_shared<HashChainForwardProcessor>(m_configuration, m_key_manager, chain_metadata);
         
-        case ProcessingMode::VALIDATE:
-            return std::make_shared<OpenSSLHashChainValidationStage>(m_configuration, m_key_manager, chain_metadata);
+        case robo_trace::processing::Mode::VALIDATE:
+            return std::make_shared<HashChainValidationProcessor>(m_configuration, m_key_manager, chain_metadata);
 
         // TODO: We need a validate stage too.
         default: 

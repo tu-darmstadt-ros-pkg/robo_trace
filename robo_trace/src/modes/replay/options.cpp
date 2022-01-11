@@ -8,17 +8,13 @@
 
 namespace po = boost::program_options;
 
-namespace robo_trace {
+namespace robo_trace::replay {
 
+Options::Options() = default;
 
-PlayerOptions::PlayerOptions() {
-    //
-};
+Options::~Options() = default;
 
-PlayerOptions::~PlayerOptions() = default;
-
-
-void PlayerOptions::load(const ros::NodeHandle& node_handle) {
+void Options::load(const ros::NodeHandle& node_handle) {
 
     ros::NodeHandle player_namespace(node_handle, "playback");
     ros::NodeHandle publish_clock_namespace(node_handle, "clock");
@@ -36,7 +32,7 @@ void PlayerOptions::load(const ros::NodeHandle& node_handle) {
     
 }
 
-void PlayerOptions::setup(po::options_description& description) {
+void Options::setup(po::options_description& description) {
 
     description.add_options()
         ("prefix,p", po::value<std::string>()->default_value(""), "prefixes all output topics in replay")
@@ -59,14 +55,19 @@ void PlayerOptions::setup(po::options_description& description) {
         ("wait-for-subscribers", "wait for at least one subscriber on each topic before publishing")
         //("rate-control-topic", po::value<std::string>(), "watch the given topic, and if the last publish was more than <rate-control-max-delay> ago, wait until the topic publishes again to continue playback")
         //("rate-control-max-delay", po::value<float>()->default_value(1.0f), "maximum time difference from <rate-control-topic> before pausing");
+        ("remote", "Playback is remote contolled throug services.")
         ;
 
 }
 
 
 
-void PlayerOptions::load(po::variables_map& options) {
+void Options::load(po::variables_map& options) {
 
+    if (options.count("remote")) {
+        m_playback_remote_controlled = true;
+        
+    }
     if (options.count("prefix")) {
         m_topic_prefix = options["prefix"].as<std::string>();
     }
@@ -111,7 +112,7 @@ void PlayerOptions::load(po::variables_map& options) {
 
 }   
 
-void PlayerOptions::validate() {
+void Options::validate() {
 
     if (m_topic_queue_size < 1) {
         std::cout << "Topic queue size must be greater than 0." << std::endl; exit(0);

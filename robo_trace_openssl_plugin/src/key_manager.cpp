@@ -10,9 +10,9 @@
 #include <ros/console.h>
 
 
-namespace robo_trace {
+namespace robo_trace::plugin::open_ssl {
 
-OpenSSLPluginKeyManager::OpenSSLPluginKeyManager(const ros::NodeHandle& plugin_namespace) {
+KeyManager::KeyManager(const ros::NodeHandle& plugin_namespace) {
     
     /*
         Setup namespace
@@ -147,41 +147,41 @@ OpenSSLPluginKeyManager::OpenSSLPluginKeyManager(const ros::NodeHandle& plugin_n
 
 }
 
-OpenSSLPluginKeyManager::~OpenSSLPluginKeyManager() {
+KeyManager::~KeyManager() {
     // 
 }
 
-ros::NodeHandle& OpenSSLPluginKeyManager::getKeyManagerNodeHandle() {
+ros::NodeHandle& KeyManager::getKeyManagerNodeHandle() {
     return m_handle;
 }
 
 
-EVP_PKEY* OpenSSLPluginKeyManager::getRecorderKey() {
+EVP_PKEY* KeyManager::getRecorderKey() {
     return m_recorder_key.get();
 }
 
-const std::string& OpenSSLPluginKeyManager::getRecorderPublicKeyString() const {
+const std::string& KeyManager::getRecorderPublicKeyString() const {
     return m_recorder_public_key_string;
 }
 
-const std::string& OpenSSLPluginKeyManager::getRecorderPrivateKeyString() const {
+const std::string& KeyManager::getRecorderPrivateKeyString() const {
     return m_recorder_private_key_string;
 }
 
    
-EVP_PKEY* OpenSSLPluginKeyManager::getAuthorityPublicKey() {
+EVP_PKEY* KeyManager::getAuthorityPublicKey() {
     return m_authority_public_key.get();
 }
 
-const std::string& OpenSSLPluginKeyManager::getAuthorityPublicKeyString() const {
+const std::string& KeyManager::getAuthorityPublicKeyString() const {
     return m_authority_public_key_string;
 }
 
-EVP_PKEY* OpenSSLPluginKeyManager::getAuthorityPrivateKey() {
+EVP_PKEY* KeyManager::getAuthorityPrivateKey() {
     return m_authority_private_key.get();
 } 
 
-std::string OpenSSLPluginKeyManager::getAuthorityPrivateKeyString() const {
+std::string KeyManager::getAuthorityPrivateKeyString() const {
     return m_authority_private_key_string;
 } 
 

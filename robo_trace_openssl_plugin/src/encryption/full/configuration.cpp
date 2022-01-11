@@ -2,18 +2,17 @@
 #include "robo_trace_openssl_plugin/encryption/full/configuration.hpp"
 
 
-namespace robo_trace {
+namespace robo_trace::plugin::open_ssl {
 
-OpenSSLFullEncryptionConfiguration::OpenSSLFullEncryptionConfiguration() = default;
+FullEncryptionModuleConfiguration::FullEncryptionModuleConfiguration() = default;
 
-OpenSSLFullEncryptionConfiguration::~OpenSSLFullEncryptionConfiguration() = default;
+FullEncryptionModuleConfiguration::~FullEncryptionModuleConfiguration() = default;
 
-
-const std::string& OpenSSLFullEncryptionConfiguration::getEncryptionMethod() const {
+const std::string& FullEncryptionModuleConfiguration::getEncryptionMethod() const {
     return m_encryption_method;
 }
 
-void OpenSSLFullEncryptionConfiguration::setEnryptionMethod(const std::string method) {
+void FullEncryptionModuleConfiguration::setEnryptionMethod(const std::string method) {
     m_encryption_method = method;
 }
 

@@ -3,30 +3,34 @@
 // Std
 #include <string>
 #include <memory>
+// ROS
+#include <ros/ros.h>
 // Project
 #include "robo_trace/util/options.hpp"
 
 
-namespace robo_trace {
+namespace robo_trace::store {
 
-class ConnectionOptions final : public OptionsContainer {
+class Options final : public robo_trace::util::Options {
 
 public:
 
-    typedef std::shared_ptr<ConnectionOptions> Ptr;
-    typedef std::shared_ptr<const ConnectionOptions> ConstPtr;
+    typedef std::shared_ptr<Options> Ptr;
+    typedef std::shared_ptr<const Options> ConstPtr;
 
 public:
 
     /**
      *
      */
-    ConnectionOptions();
+    Options();
 
     /**
      *
      */
-    virtual ~ConnectionOptions(); 
+    virtual ~Options(); 
+
+public:
 
     /**
      *
@@ -51,16 +55,21 @@ public:
 public:
 
     /** */
-    std::string m_database_name;
+    int m_host_port;
     /** */
-    std::string m_summary_collection_name;
+    std::string m_host_name;
 
     /** */
-    int m_database_server_port;
+    std::string m_database_name;
     /** */
-    std::string m_database_server_host;
+    std::string m_collection_name_summary;
+
     /** */
-    float m_database_server_connection_timeout;
+    int m_connection_pool_size_min;
+    /** */
+    int m_connection_pool_size_max;
+    /** */
+    int m_connection_timeout_ms;
 
 };
 

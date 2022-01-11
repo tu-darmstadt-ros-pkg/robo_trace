@@ -4,62 +4,61 @@
 #include <string>
 #include <memory>
 // MongoDB
-#include "robo_trace/config.h"
-#include <mongo/bson/bsonobj.h>
-#include <mongo/bson/bsonobjbuilder.h>
+#include <bsoncxx/document/view.hpp>
+#include <bsoncxx/builder/basic/document.hpp>
 
 
-namespace robo_trace {
+namespace robo_trace::store {
 
-class DataContainer {
+class Container {
 
 public:
 
-    typedef std::shared_ptr<DataContainer> Ptr;
+    typedef std::shared_ptr<Container> Ptr;
 
-    typedef std::shared_ptr<const DataContainer> ConstPtr;
+    typedef std::shared_ptr<const Container> ConstPtr;
 
 public:
 
     /**
      *
      */    
-    DataContainer();
+    Container();
 
     /**
      *
      */
-    DataContainer(const mongo::BSONObj& other);
+    Container(const bsoncxx::document::view& other);
 
     /**
      *
      */
-    ~DataContainer();
+    ~Container();
 
 
-    void append(const std::string& name, const bool val);
+    void append(const std::string& name, bool val);
 
     bool getBool(const std::string& name);
 
 
-    void append(const std::string& name, const int val);
+    void append(const std::string& name, int val);
     
     int getInt(const std::string& name);
 
 
-    void append(const std::string& name, const double val);
+    void append(const std::string& name, double val);
 
     double getDouble(const std::string& name);
 
 
-    void append(const std::string& name, const std::string val);
+    void append(const std::string& name, const std::string& val);
 
     const std::string getString(const std::string& name);
 
 
-    void append(const std::string& name, const void* data, size_t size);
+    void append(const std::string& name, const uint8_t* data, size_t size);
 
-    const void* getBinData(const std::string& name, size_t& size); 
+    const uint8_t* getBinData(const std::string& name, size_t& size); 
 
 
     /**
@@ -69,12 +68,12 @@ public:
      * @param name the key under which the nested container is stored.
      * @return the nested container store.
      */
-    const DataContainer::Ptr getContainer(const std::string& name);
+    const Container::Ptr getContainer(const std::string& name);
 
      /**
      * 
      */
-    void serialize(mongo::BSONObjBuilder& builder);
+    void serialize(bsoncxx::builder::basic::sub_document& builder);
 
 private:
 
@@ -86,15 +85,17 @@ private:
 private:
 
     /** */
-    mongo::BSONObjBuilder m_bson_builder;
-    
+    // mongo::BSONObjBuilder m_bson_builder;
+    bsoncxx::builder::basic::document m_builder;
+
     /** */
-    bool m_read_dirty_flag;
+    bool m_read_view_dirty;
     /** */
-    mongo::BSONObj m_read_object;
+    // mongo::BSONObj m_read_object;
+    bsoncxx::document::view m_read_view;
 
     /**  */
-    std::unordered_map<std::string, DataContainer::Ptr> m_child_wrappers;
+    std::unordered_map<std::string, Container::Ptr> m_children;
 
 };
 

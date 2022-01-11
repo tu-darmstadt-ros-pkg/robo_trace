@@ -3,13 +3,14 @@
 #include <vector>
 #include <memory>
 // Project
-#include "robo_trace/processing/plugin/plugin.hpp"
+#include "robo_trace/processing/plugin.hpp"
+#include "robo_trace/processing/descriptor.hpp"
 #include "robo_trace_openssl_plugin/key_manager.hpp"
 
 
-namespace robo_trace {
+namespace robo_trace::plugin::open_ssl {
     
-class RoboTraceOpenSSLPlugin final : public RoboTraceProcessingPlugin {
+class RoboTraceOpenSSLPlugin final : public robo_trace::processing::Plugin {
 
 public:
 
@@ -26,17 +27,17 @@ public:
     /**
      * 
      */
-    const OpenSSLPluginKeyManager::Ptr& getKeyManager() const;
+    const KeyManager::Ptr& getKeyManager() const;
 
     /**
      * 
      */
-    virtual std::vector<ProcessingStageDescriptor::Ptr> setup() final override;
+    virtual std::vector<robo_trace::processing::Descriptor::Ptr> setup() final override;
 
 private:
 
     /** */
-    OpenSSLPluginKeyManager::Ptr m_key_manager;
+    KeyManager::Ptr m_key_manager;
 
 };
 

@@ -1,6 +1,10 @@
 #pragma once
 
 
+// Whether to check if all bytes have been consumed after comined encryption and serialization
+// #define MODULE_PARTIAL_ENCRYPTION_FORWARD_VALIDATE_BYTES
+
+
 // ############# Ros param related definitions #############
 
 #define ROS_PARAM_HASH_CHAIN_METHOD_NAME "hashing_method"

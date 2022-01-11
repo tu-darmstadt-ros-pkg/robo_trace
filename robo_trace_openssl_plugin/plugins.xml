@@ -1,6 +1,6 @@
 <library path="librobo_trace_openssl_plugin">
 
-  <class type="robo_trace::RoboTraceOpenSSLPlugin" base_class_type="robo_trace::RoboTraceProcessingPlugin">
+  <class type="robo_trace::plugin::open_ssl::RoboTraceOpenSSLPlugin" base_class_type="robo_trace::processing::Plugin">
     <description>OpenSSL processing stages plugin.</description>
   </class>
 

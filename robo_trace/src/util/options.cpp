@@ -9,10 +9,10 @@
 
 namespace po = boost::program_options;
 
-namespace robo_trace {
+namespace robo_trace::util {
 
 
-void OptionsContainer::load(const std::vector<OptionsContainer::Ptr>& containers, ros::NodeHandle& node_handle, int argc, char** argv) {
+void Options::load(const std::vector<Options::Ptr>& containers, ros::NodeHandle& node_handle, int argc, char** argv) {
 
     /*
         Load all the parameters that there are into the .
@@ -23,7 +23,7 @@ void OptionsContainer::load(const std::vector<OptionsContainer::Ptr>& containers
     description.add_options()
         ("help,h", "produce help message");
         
-    for (const OptionsContainer::Ptr& container : containers) {
+    for (const Options::Ptr& container : containers) {
         container->setup(description);
     }
 
@@ -47,7 +47,7 @@ void OptionsContainer::load(const std::vector<OptionsContainer::Ptr>& containers
         Load in the parameters from ROS.
     */
 
-    for (const OptionsContainer::Ptr& container : containers) {
+    for (const Options::Ptr& container : containers) {
         container->load(node_handle);
     }
 
@@ -55,7 +55,7 @@ void OptionsContainer::load(const std::vector<OptionsContainer::Ptr>& containers
         Load in the parameters from the CMD line. This may override ROS parameter definitions.
     */
 
-    for (const OptionsContainer::Ptr& container : containers) {
+    for (const Options::Ptr& container : containers) {
         container->load(vm);
     }
 
@@ -63,19 +63,19 @@ void OptionsContainer::load(const std::vector<OptionsContainer::Ptr>& containers
         Sanity check if the prameters make sense.
     */
 
-    for (const OptionsContainer::Ptr& container : containers) {
+    for (const Options::Ptr& container : containers) {
         container->validate();
     }
 
 }
 
 
-OptionsContainer::OptionsContainer() = default;
+Options::Options() = default;
 
-OptionsContainer::~OptionsContainer() = default;
+Options::~Options() = default;
 
 
-void OptionsContainer::validate() {
+void Options::validate() {
     //
 }
 

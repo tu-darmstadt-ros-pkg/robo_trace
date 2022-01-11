@@ -1,6 +1,21 @@
 #pragma once
 
+
 #define ROBO_TRACE_NODE_NAME "robo_trace"
+
+// If enabled, the application will terminate if a data collection is already present
+// #define PROCESSING_MODULE_BASIC_STORE_FAIL_IF_DATA_COLLECTION_PRESENT
+// If enabled, time will be upgraded from a plein index to a unique index
+#define PROCESSING_MODULE_BASIC_STORE_TREAT_TIME_AS_UNIQUE
+// If enabled, writeback of the message is validated
+#define PROCESSING_MODULE_BASIC_STORE_VALIDATE_MESSAGE_WRITEBACK
+
+// 
+#define RECORDING_SIGNAL_PIPELINE_PASS 
+// 
+#define RECORDING_SIGNAL_PIPELINE_PASS_TOPIC_PREFIX "signal_stored"
+// 
+#define RECORDING_SIGNAL_PIPELINE_PASS_TOPIC_QUEUE_SIZE 1
 
 // ########### ROS Logging related definitions ###########
 

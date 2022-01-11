@@ -4,14 +4,15 @@
 #include <stdexcept>
 // OpenSSL
 #include <openssl/rand.h>
-// MongoDB
-#include "robo_trace/config.h"
-#include <mongo/bson/bsonobjbuilder.h>
+// MongoCXX
+#include <bsoncxx/types.hpp>
+#include <bsoncxx/builder/basic/document.hpp>
+#include <bsoncxx/builder/basic/kvp.hpp>
 
 
-namespace robo_trace {
+namespace robo_trace::plugin::open_ssl {
  
-OpenSSLFullEncryptionForwardStage::OpenSSLFullEncryptionForwardStage(const OpenSSLFullEncryptionConfiguration::Ptr& configuration, const OpenSSLPluginKeyManager::Ptr& key_manager, const DataContainer::Ptr& summary) 
+FullEncryptionForwardProcessor::FullEncryptionForwardProcessor(const FullEncryptionModuleConfiguration::Ptr& configuration, const KeyManager::Ptr& key_manager, const robo_trace::store::Container::Ptr& summary) 
 : m_configuration(configuration), m_key_manager(key_manager) {
 
     /*
@@ -81,16 +82,15 @@ OpenSSLFullEncryptionForwardStage::OpenSSLFullEncryptionForwardStage(const OpenS
 
 }
   
-OpenSSLFullEncryptionForwardStage::~OpenSSLFullEncryptionForwardStage() {
+FullEncryptionForwardProcessor::~FullEncryptionForwardProcessor() {
     EVP_CIPHER_CTX_free(m_encryption_context);
 }
 
-ProcessingMode OpenSSLFullEncryptionForwardStage::getMode() const {
-    return ProcessingMode::CAPTURE;
+robo_trace::processing::Mode FullEncryptionForwardProcessor::getMode() const {
+    return robo_trace::processing::Mode::CAPTURE;
 }
 
-
-void OpenSSLFullEncryptionForwardStage::process(const ProcessingContext::Ptr& context) {
+void FullEncryptionForwardProcessor::process(const robo_trace::processing::Context::Ptr& context) {
 
     if (!RAND_bytes(&m_iv[0], m_iv.size())) {
         throw std::runtime_error("Failed sampling IV!");
@@ -128,9 +128,19 @@ void OpenSSLFullEncryptionForwardStage::process(const ProcessingContext::Ptr& co
         throw std::runtime_error("Failed finalizing encryption.");
     }
 
-    mongo::BSONObjBuilder builder;
-    builder.appendBinData("encrypted", cipher_text_length + length, mongo::BinDataType::BinDataGeneral, &m_cipher_buffer[0]);
-    context->setSerializedMessage(builder.obj());
+    bsoncxx::types::b_binary wrapper;
+    wrapper.sub_type = bsoncxx::binary_sub_type::k_binary;
+    wrapper.size = cipher_text_length + length;
+    wrapper.bytes = &m_cipher_buffer[0];
+
+    bsoncxx::builder::basic::document builder{};
+    builder.append(bsoncxx::builder::basic::kvp("encrypted", wrapper));
+    
+    context->setSerializedMessage(builder.extract());
+
+   // mongo::BSONObjBuilder builder;
+   // builder.appendBinData("encrypted", cipher_text_length + length, mongo::BinDataType::BinDataGeneral, &m_cipher_buffer[0]);
+   // context->setSerializedMessage(builder.obj());
     
 }
 

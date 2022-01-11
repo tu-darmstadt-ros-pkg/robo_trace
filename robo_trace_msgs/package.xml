@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<package format="2">
+
+  <name>robo_trace_msgs</name>
+  <description>Message definitions for interfacing with RoboTrace.</description>
+
+  <version>0.1.0</version>
+  <license>TODO</license>
+  
+  <maintainer email="max.schmidt.11@stud.tu-darmstadt.de">Max Schmidt</maintainer>
+ 
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <build_depend>message_generation</build_depend>
+  <exec_depend>message_runtime</exec_depend>
+
+  <depend>actionlib_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>geometry_msgs</depend>
+
+  <export>
+  </export>
+
+</package>

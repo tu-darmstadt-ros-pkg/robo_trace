@@ -12,26 +12,26 @@
 #include "robo_trace_openssl_plugin/definitions.hpp"
 
 
-namespace robo_trace {
+namespace robo_trace::plugin::open_ssl {
 
-class OpenSSLPluginKeyManager {
+class KeyManager {
 
 public:
 
-    typedef std::shared_ptr<OpenSSLPluginKeyManager> Ptr;
-    typedef std::shared_ptr<const OpenSSLPluginKeyManager> ConstPtr;
+    typedef std::shared_ptr<KeyManager> Ptr;
+    typedef std::shared_ptr<const KeyManager> ConstPtr;
 
 public:
 
     /**
      * 
      */
-    OpenSSLPluginKeyManager(const ros::NodeHandle& plugin_namespace);
+    KeyManager(const ros::NodeHandle& plugin_namespace);
 
     /**
      * 
      */
-    ~OpenSSLPluginKeyManager();
+    ~KeyManager();
 
     /**
      * 

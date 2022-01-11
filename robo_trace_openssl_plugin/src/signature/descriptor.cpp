@@ -7,19 +7,19 @@
 #include "robo_trace_openssl_plugin/signature/forward.hpp"
 
 
-namespace robo_trace {
+namespace robo_trace::plugin::open_ssl {
 
 /**
  * TODO: Pass in private key
  */
-OpenSSLSignatureStageDescriptor::OpenSSLSignatureStageDescriptor(const OpenSSLPluginKeyManager::Ptr& key_manager, const ros::NodeHandle& stages_namespace) 
-: ProcessingStageDescriptor(stages_namespace, "openssl_signature"), m_key_manager(key_manager) {
+SignatureModuleDescriptor::SignatureModuleDescriptor(const KeyManager::Ptr& key_manager, const ros::NodeHandle& stages_namespace) 
+: robo_trace::processing::Descriptor(stages_namespace, "openssl_signature"), m_key_manager(key_manager) {
   
     /*
         Create and load the configuration.
     */
 
-    m_configuration = std::make_shared<OpenSSLSignatureStageConfiguration>();
+    m_configuration = std::make_shared<SignatureModuleConfiguration>();
 
 
     m_configuration->setHashingMethodName(m_handle.param<std::string>(
@@ -37,18 +37,18 @@ OpenSSLSignatureStageDescriptor::OpenSSLSignatureStageDescriptor(const OpenSSLPl
     
 }
 
-OpenSSLSignatureStageDescriptor::~OpenSSLSignatureStageDescriptor() = default;
+SignatureModuleDescriptor::~SignatureModuleDescriptor() = default;
 
-bool OpenSSLSignatureStageDescriptor::isModeSupported(const ProcessingMode mode) const {
+bool SignatureModuleDescriptor::isModeSupported(const robo_trace::processing::Mode mode) const {
     // Currently only FORWARD is implemented.
-    return mode == ProcessingMode::CAPTURE;
+    return mode == robo_trace::processing::Mode::CAPTURE;
 }
 
-std::optional<ProcessingStage::Ptr> OpenSSLSignatureStageDescriptor::getStage(const DataContainer::Ptr& summary, const ProcessingMode mode) {
+std::optional<robo_trace::processing::Processor::Ptr> SignatureModuleDescriptor::getStage(const robo_trace::store::Container::Ptr& summary, const robo_trace::processing::Mode mode) {
     switch(mode) {
 
-        case ProcessingMode::CAPTURE : 
-            return std::make_shared<OpenSSLSignatureForwardStage>(m_configuration, m_key_manager);
+        case robo_trace::processing::Mode::CAPTURE : 
+            return std::make_shared<SignatureForwardProcessor>(m_configuration, m_key_manager);
         
         // TODO: We need a validate stage too.
         default: 

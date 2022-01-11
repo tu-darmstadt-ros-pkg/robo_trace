@@ -4,9 +4,9 @@
 #include <stdexcept>
  #include <openssl/err.h>
 
-namespace robo_trace {
+namespace robo_trace::plugin::open_ssl {
 
-OpenSSLFullEncryptionBackwardStage::OpenSSLFullEncryptionBackwardStage(const OpenSSLFullEncryptionConfiguration::Ptr& configuration, const OpenSSLPluginKeyManager::Ptr& key_manager, const ros_babel_fish::DescriptionProvider::Ptr& message_description_provider, const DataContainer::Ptr& metadata) 
+FullEncryptionBackwardProcessor::FullEncryptionBackwardProcessor(const FullEncryptionModuleConfiguration::Ptr& configuration, const KeyManager::Ptr& key_manager, const ros_babel_fish::DescriptionProvider::Ptr& message_description_provider, const robo_trace::store::Container::Ptr& metadata) 
  : m_configuration(configuration), m_key_manager(key_manager) {
 
     /*
@@ -76,29 +76,30 @@ OpenSSLFullEncryptionBackwardStage::OpenSSLFullEncryptionBackwardStage(const Ope
    
 }
 
-OpenSSLFullEncryptionBackwardStage::~OpenSSLFullEncryptionBackwardStage() {
+FullEncryptionBackwardProcessor::~FullEncryptionBackwardProcessor() {
     EVP_CIPHER_CTX_free(m_decryption_context);
 }
 
 
-ProcessingMode OpenSSLFullEncryptionBackwardStage::getMode() const {
-    return ProcessingMode::REPLAY;
+robo_trace::processing::Mode FullEncryptionBackwardProcessor::getMode() const {
+    return robo_trace::processing::Mode::REPLAY;
 }
 
-void OpenSSLFullEncryptionBackwardStage::process(const ProcessingContext::Ptr& context) {
+void FullEncryptionBackwardProcessor::process(const robo_trace::processing::Context::Ptr& context) {
     
-    const std::optional<mongo::BSONObj>& o_serialized = context->getSerializedMessage();
+    const std::optional<bsoncxx::document::view>& o_serialized = context->getSerializedMessage();
 
     if (!o_serialized) {
         throw std::runtime_error("Serialized message not present.");
     }
 
-    const mongo::BSONObj& serialized = o_serialized.value();
+    const bsoncxx::document::view& serialized = o_serialized.value();
+    bsoncxx::document::view::const_iterator matches = serialized.find("encrypted");
 
-    if (!serialized.hasField("encrypted")) {
-        throw std::runtime_error("Message not encrypted!");
+    if (matches == serialized.end()) {
+        throw std::runtime_error("Failed decrypting message! Could not find message.");
     }
-
+ 
     size_t iv_length = 0;
     // Trusting that encryption IV size matches IV size of decrypt. 
     const unsigned char* iv_data = (const unsigned char*) context->getMetadata()->getBinData("iv", iv_length); 
@@ -107,8 +108,9 @@ void OpenSSLFullEncryptionBackwardStage::process(const ProcessingContext::Ptr& c
         throw std::runtime_error("Failed to initialize EVP context!");
     }
 
-    int encrypted_legth;
-    const unsigned char* encrypted_data = (const unsigned char*) serialized["encrypted"].binData(encrypted_legth);
+    const bsoncxx::types::b_binary wrapper = (*matches).get_binary();
+    const size_t encrypted_legth = wrapper.size;
+    const unsigned char* encrypted_data = (const unsigned char*) wrapper.bytes;
 
     ros_babel_fish::BabelFishMessage::Ptr message_wrapper = boost::make_shared<ros_babel_fish::BabelFishMessage>();
     message_wrapper->morph(m_message_description->md5, m_message_description->datatype, m_message_description->message_definition, "0");    

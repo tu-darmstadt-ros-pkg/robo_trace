@@ -13,26 +13,26 @@
 
 namespace po = boost::program_options;
 
-namespace robo_trace {
+namespace robo_trace::capture {
 
-class RecorderOptions final : public OptionsContainer {
+class Options final : public robo_trace::util::Options {
 
 public:
 
-    typedef std::shared_ptr<RecorderOptions> Ptr;
-    typedef std::shared_ptr<const RecorderOptions> ConstPtr;
+    typedef std::shared_ptr<Options> Ptr;
+    typedef std::shared_ptr<const Options> ConstPtr;
 
 public:
 
     /**
      *
      */
-    RecorderOptions();
+    Options();
 
     /**
      *
      */
-    ~RecorderOptions(); 
+    ~Options(); 
 
     /**
      *

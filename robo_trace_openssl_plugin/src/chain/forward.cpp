@@ -10,9 +10,9 @@
 #define STAGE_LOGGER_NAME "robo_trace_openssl_chain_forward"
 
 
-namespace robo_trace {
+namespace robo_trace::plugin::open_ssl {
 
-OpenSSLHashChainForwardStage::OpenSSLHashChainForwardStage(const OpenSSLHashChainConfiguration::Ptr& configuration, const OpenSSLPluginKeyManager::Ptr& key_manager, const DataContainer::Ptr& metadata) 
+HashChainForwardProcessor::HashChainForwardProcessor(const HashChainModuleConfiguration::Ptr& configuration, const KeyManager::Ptr& key_manager, const robo_trace::store::Container::Ptr& metadata) 
 : m_configuration(configuration) {
     
     m_hashing_context = EVP_MD_CTX_new();
@@ -45,16 +45,16 @@ OpenSSLHashChainForwardStage::OpenSSLHashChainForwardStage(const OpenSSLHashChai
 
 }
 
-OpenSSLHashChainForwardStage::~OpenSSLHashChainForwardStage() {
+HashChainForwardProcessor::~HashChainForwardProcessor() {
     EVP_MD_CTX_free(m_hashing_context);
 }
 
 
-ProcessingMode OpenSSLHashChainForwardStage::getMode() const {
-    return ProcessingMode::CAPTURE;
+robo_trace::processing::Mode HashChainForwardProcessor::getMode() const {
+    return robo_trace::processing::Mode::CAPTURE;
 }
 
-void OpenSSLHashChainForwardStage::process(const ProcessingContext::Ptr& context) {
+void HashChainForwardProcessor::process(const robo_trace::processing::Context::Ptr& context) {
     /*
         
         The official documentation on OpenSSL's EVP can be found here:

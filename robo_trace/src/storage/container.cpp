@@ -1,14 +1,20 @@
 // Base
 #include "robo_trace/storage/container.hpp"
+// MongoDB
+#include <bsoncxx/types.hpp>
+#include <bsoncxx/types/bson_value/view.hpp>
+#include <bsoncxx/stdx/string_view.hpp>
+#include <bsoncxx/builder/basic/kvp.hpp>
 
 
-namespace robo_trace {
+namespace robo_trace::store {
 
-DataContainer::DataContainer()
-: m_read_dirty_flag(false) {
+Container::Container()
+: m_read_view_dirty(false) {
     //
 }
 
+/*
 DataContainer::DataContainer(const mongo::BSONObj& other)
 : m_read_dirty_flag(true) {
 
@@ -25,134 +31,153 @@ DataContainer::DataContainer(const mongo::BSONObj& other)
 
     }
 
+}*/
+
+Container::Container(const bsoncxx::document::view& other)
+: m_read_view_dirty(true) {
+
+    //for(bsoncxx::document::view::const_iterator iterator = other.begin(); iterator.more(); ) { 
+    for (const bsoncxx::document::element& element : other) {
+        //const bsoncxx::document::element& element = iterator.next();
+    
+        if (element.type() == bsoncxx::type::k_document) {
+            m_children[element.key().to_string()] = std::make_shared<Container>(element.get_document());
+        } else {
+            m_builder.append(bsoncxx::builder::basic::kvp(element.key(), element.get_value()));
+        }
+
+    }
+
 }
 
-DataContainer::~DataContainer() = default;
+Container::~Container() = default;
 
 
-void DataContainer::append(const std::string& name, const bool val) {
-    m_bson_builder.append(name, val);
-    m_read_dirty_flag = true;
+void Container::append(const std::string& name, bool val) {
+    m_builder.append(bsoncxx::builder::basic::kvp(name, val));
+    m_read_view_dirty = true;
 }
 
-bool DataContainer::getBool(const std::string& name) {
+bool Container::getBool(const std::string& name) {
 
-    if (m_read_dirty_flag) {
+    if (m_read_view_dirty) {
         synchronize();
     }
     
-    return m_read_object.getField(name).boolean();
+    return m_read_view[name].get_bool();
 }
 
 
-void DataContainer::append(const std::string& name, const int val) {
-    m_bson_builder.append(name, val);
-    m_read_dirty_flag = true;
+void Container::append(const std::string& name, int val) {
+    m_builder.append(bsoncxx::builder::basic::kvp(name, val));
+    m_read_view_dirty = true;
 }
 
-int DataContainer::getInt(const std::string& name) {
+int Container::getInt(const std::string& name) {
 
-    if (m_read_dirty_flag) {
+    if (m_read_view_dirty) {
         synchronize();
     }
 
-    return m_read_object.getField(name).numberInt();
+    return m_read_view[name].get_int32();
 }
 
 
-void DataContainer::append(const std::string& name, const double val) {
-    m_bson_builder.append(name, val);
-    m_read_dirty_flag = true;
+void Container::append(const std::string& name, double val) {
+    m_builder.append(bsoncxx::builder::basic::kvp(name, val));
+    m_read_view_dirty = true;
 }
 
-double DataContainer::getDouble(const std::string& name) {
+double Container::getDouble(const std::string& name) {
 
-    if (m_read_dirty_flag) {
+    if (m_read_view_dirty) {
         synchronize();
     }
 
-    return m_read_object.getField(name).numberDouble();
+    return m_read_view[name].get_double();
 }
 
 
-void DataContainer::append(const std::string& name, const std::string val) {
-    m_bson_builder.append(name, val);
-    m_read_dirty_flag = true;
+void Container::append(const std::string& name, const std::string& val) {
+    m_builder.append(bsoncxx::builder::basic::kvp(name, val));
+    m_read_view_dirty = true;
 }
 
-const std::string DataContainer::getString(const std::string& name) {
+const std::string Container::getString(const std::string& name) {
 
-    if (m_read_dirty_flag) {
+    if (m_read_view_dirty) {
         synchronize();
     }
 
-    return m_read_object.getField(name).str();
+    return m_read_view[name].get_utf8().value.to_string();
 }
 
-void DataContainer::append(const std::string& name, const void* data, size_t size) {
-    m_bson_builder.appendBinData(name, size, mongo::BinDataType::BinDataGeneral, data);
-    m_read_dirty_flag = true;
+void Container::append(const std::string& name, const uint8_t* data, size_t size) {
+    
+    bsoncxx::types::b_binary wrapper;
+    wrapper.sub_type = bsoncxx::binary_sub_type::k_binary;
+    wrapper.size = size;
+    wrapper.bytes = data;
+    
+    m_builder.append(bsoncxx::builder::basic::kvp(name, wrapper));
+    m_read_view_dirty = true;
 }
 
-const void* DataContainer::getBinData(const std::string& name, size_t& size) {
+const uint8_t* Container::getBinData(const std::string& name, size_t& size) {
 
-    if (m_read_dirty_flag) {
+    if (m_read_view_dirty) {
         synchronize();
     }
 
-    int size_i;
-    const char* data = m_read_object.getField(name).binData(size_i);
+    const bsoncxx::types::b_binary wrapper = m_read_view[name].get_binary();
+    size = static_cast<size_t>(wrapper.size);
 
-    size = static_cast<size_t>(size_i);
-    return data;
+    return wrapper.bytes;
 }
 
 
-const DataContainer::Ptr DataContainer::getContainer(const std::string& name) {
+const Container::Ptr Container::getContainer(const std::string& name) {
     
     /*
         Note that we can ONLY append to a bson builder! Hence, when nesting containers
         we need to must create the components individually and then merge them on serialization.
     */
 
-    std::unordered_map<std::string, DataContainer::Ptr>::const_iterator result = m_child_wrappers.find(name);
+    std::unordered_map<std::string, Container::Ptr>::const_iterator result = m_children.find(name);
     
-    if (result != m_child_wrappers.end()) {
+    if (result != m_children.end()) {
         return result->second;
     }
 
-    DataContainer::Ptr created = std::make_shared<DataContainer>();
+    Container::Ptr created = std::make_shared<Container>();
     // Need to make a copy of name here as it's only a reference.
     // child_wrappers[name] = created;
     //std::string x = name;
     //std::pair<std::string, MongoBsonMetadataContainer::Ptr> pair = std::make_pair<std::string, MongoBsonMetadataContainer::Ptr>(x, created);
-    m_child_wrappers[name] = created;
+    m_children[name] = created;
 
-    return std::static_pointer_cast<DataContainer>(created);
+    return std::static_pointer_cast<Container>(created);
 
 }
 
-void DataContainer::synchronize() {
+void Container::synchronize() {
     // Simply load in the new tmp object.
-    m_read_object = m_bson_builder.asTempObj();
-    m_read_dirty_flag = false;
+    m_read_view = m_builder.view();
+    m_read_view_dirty = false;
 }
 
-void DataContainer::serialize(mongo::BSONObjBuilder& builder) {
+void Container::serialize(bsoncxx::builder::basic::sub_document& builder) {
 
-    builder.appendElements(m_bson_builder.obj());
+    builder.append(bsoncxx::builder::concatenate(m_builder.view()));
 
-    for (auto& entry : m_child_wrappers) {
+    for (auto& entry : m_children) {
         
-        // Builder appending to current byte array  
-        mongo::BufBuilder& sub_object_buffer_start = builder.subobjStart(entry.first);
-        mongo::BSONObjBuilder sub_object_builder(sub_object_buffer_start);
+        builder.append(bsoncxx::builder::basic::kvp(entry.first, 
+            [&entry](bsoncxx::builder::basic::sub_document sub_document_builder) {
+                entry.second->serialize(sub_document_builder);
+            }));
 
-        entry.second->serialize(sub_object_builder);
-        // Sub builder finished.
-        sub_object_builder.done();
-
-    }
+    }    
 
 }
 

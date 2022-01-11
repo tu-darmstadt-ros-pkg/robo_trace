@@ -10,31 +10,32 @@
 
 namespace po = boost::program_options;
 
-namespace robo_trace {
+namespace robo_trace::util {
 
-class OptionsContainer {
-
-public:
-
-    typedef std::shared_ptr<OptionsContainer> Ptr;
-    typedef std::shared_ptr<const OptionsContainer> ConstPtr;
+class Options {
 
 public:
 
-    static void load(const std::vector<OptionsContainer::Ptr>& containers, ros::NodeHandle& node_handle, int argc, char** argv);
+    typedef std::shared_ptr<Options> Ptr;
+    typedef std::shared_ptr<const Options> ConstPtr;
+
+public:
+
+    static void load(const std::vector<Options::Ptr>& containers, ros::NodeHandle& node_handle, int argc, char** argv);
 
 public:
 
     /**
      *
      */
-    OptionsContainer();
+    Options();
 
     /**
      *
      */
-    virtual ~OptionsContainer(); 
+    virtual ~Options(); 
 
+public:
 
     /**
      *

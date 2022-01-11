@@ -14,31 +14,31 @@
 
 namespace po = boost::program_options;
 
-namespace robo_trace {
+namespace robo_trace::replay {
 
 /**
  * The container holding all the information for how the player shoud realize the playback.
  * Priarily inspired by rosbag. Shout outs!
  *  -> https://github.com/ros/ros_comm/blob/noetic-devel/tools/rosbag/src/player.cpp#L77
  */
-class PlayerOptions final : public OptionsContainer {
+class Options final : public robo_trace::util::Options {
 
 public:
 
-    typedef std::shared_ptr<PlayerOptions> Ptr;
-    typedef std::shared_ptr<PlayerOptions> ConstPtr;
+    typedef std::shared_ptr<Options> Ptr;
+    typedef std::shared_ptr<Options> ConstPtr;
 
 public:
 
     /**
      *
      */
-    PlayerOptions();
+    Options();
 
     /**
      *
      */
-    virtual ~PlayerOptions();
+    virtual ~Options();
 
     /**
      *
@@ -62,6 +62,9 @@ public:
 
 public:
 
+    /** */
+    bool m_playback_remote_controlled;
+    
     /** */
     int m_topic_queue_size;
      /** */

@@ -62,6 +62,7 @@
         "*.ipp": "cpp",
         "regex": "cpp",
         "list": "cpp",
-        "typeindex": "cpp"
+        "typeindex": "cpp",
+        "queue": "cpp"
     }
 }

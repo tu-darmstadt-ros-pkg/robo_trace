@@ -1,29 +1,55 @@
 #pragma once
 // Std
 #include <mutex>
+#include <memory>
 // MongoDB
-#include "robo_trace/config.h"
-#include <mongo/client/init.h>
-#include <mongo/client/dbclient.h>
+#include <mongocxx/pool.hpp>
+#include <mongocxx/instance.hpp>
 // Project
 #include "robo_trace/storage/options.hpp"
 
 
-namespace robo_trace {
+namespace robo_trace::store {
 
-class ConnectionProvider {
+class Connector {
+
+public:
+
+    /**
+     * 
+     */
+    static Connector& instance();
+
+private:
+
+    /**
+     * 
+     */
+    Connector();
+
+    /**
+     * 
+     */
+    ~Connector();
 
 public:
 
     /**
      *
      */
-    static void initialize();
+    void configure(const Options::ConstPtr& options);
 
     /**
      * 
      */
-    static std::shared_ptr<mongo::DBClientConnection> getConnection(const ConnectionOptions::ConstPtr& options);
+    mongocxx::pool::entry getClient();
+
+private:
+
+    /** */
+    std::unique_ptr<mongocxx::instance> m_driver_instance = nullptr;
+    /** */
+    std::unique_ptr<mongocxx::pool> m_pool = nullptr;
 
 };
 

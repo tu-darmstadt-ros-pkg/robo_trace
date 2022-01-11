@@ -1,5 +1,14 @@
 // Base
 #include "robo_trace/modes/replay/loader.hpp"
+// MongoCXX
+#include <bsoncxx/types.hpp>
+#include <bsoncxx/json.hpp>
+#include <bsoncxx/builder/basic/document.hpp>
+#include <bsoncxx/builder/basic/kvp.hpp>
+#include <mongocxx/options/find.hpp>
+#include <mongocxx/client.hpp>
+#include <mongocxx/database.hpp>
+#include <mongocxx/collection.hpp>
 // Ros
 #include <ros/console.h>
 // Project
@@ -8,18 +17,18 @@
 #include "robo_trace/processing/context.hpp"
 
 
-namespace robo_trace {
+namespace robo_trace::replay {
 
-MessageLoader::MessageLoader(const ConnectionOptions::ConstPtr& connector_options, const std::optional<mongo::BSONObj>& structure_query, const std::string& collection_path, std::vector<ProcessingStage::Ptr>& pipeline, ros::CallbackQueueInterface* callback_queue, const std::optional<double>& time_start, const std::optional<double>& time_end)
-: m_connector_options(connector_options), m_query_structure(structure_query), m_collection_path(collection_path),
-  m_processing_pipeline(pipeline), m_scheduling_queue(callback_queue), m_query_time_start(time_start), m_query_time_end(time_end),
+MessageLoader::MessageLoader(const std::string& collection, const std::string& database, const std::vector<robo_trace::processing::Processor::Ptr>& pipeline, ros::CallbackQueueInterface* callback_queue, const std::optional<double>& time_start, const std::optional<double>& time_end, const std::optional<bsoncxx::document::value>& structure_query)
+: m_collection(collection), m_database(database), m_processing_pipeline(pipeline), m_scheduling_queue(callback_queue),
+  m_query_time_start(time_start), m_query_time_end(time_end), m_query_structure(structure_query),  
   m_query_buffering_batch_size(5), m_deserialization_buffering_threshold(75), m_deserialization_buffering_batch_size(5),
-  m_execution_pending(false), m_message_cursor_depleted(false),
-  m_message_queue_size(0), m_time_last_batch_end(0) {
+  m_execution_pending(false), m_flush_pending(false), m_terminal(false),
+  m_message_queue_size(0), m_time_last_batch_end(-1) {
       
-      // We can not schedule the first invocation of the loader here, as a context switch might
-      // call the loader before the construction is completed!
-
+    // We can not schedule the first invocation of the loader here, as a context switch might
+    // call the loader before the construction is completed!
+    
 }
    
 MessageLoader::~MessageLoader() {
@@ -30,10 +39,14 @@ bool MessageLoader::isCompleted() const {
     // Note that this might return true even if there are no more messages. The 
     // difficulty lies in the fact that the mongo query may only be accessed by
     // one thread alone! 
-    return m_message_queue_size == 0 && m_message_cursor_depleted;
+    return !m_flush_pending && !m_execution_pending && m_message_queue_size == 0 && m_terminal;
 } 
 
-bool MessageLoader::isBuffering() const {
+bool MessageLoader::isValid() const {
+    return !m_flush_pending && (m_message_queue_size > 0);
+}
+
+bool MessageLoader::isLoading() const {
     return m_execution_pending;
 }
 
@@ -68,25 +81,42 @@ void MessageLoader::setDeserializationBufferingBatchSize(size_t size) {
     
 const std::optional<std::pair<double, ros_babel_fish::BabelFishMessage::ConstPtr>> MessageLoader::next() {
 
-    if (m_message_queue_size == 0) {
+    if (m_flush_pending || m_message_queue_size == 0) {
         return std::nullopt;
     }
 
     const std::optional<std::pair<double, ros_babel_fish::BabelFishMessage::ConstPtr>> message = m_message_queue.try_pop();
-
-    --m_message_queue_size;
+    
+    // Might be empty if a flush happened in the meantime.
+    if (message) {
+        --m_message_queue_size;
+    }
+   
     // Maybe reschedule if the buffer is depleted.
     schedule();
 
     return message;
 }
    
+void MessageLoader::reset(const double time) {
+
+    m_flush_pending = true;  
+    m_time_last_batch_end = time;
+
+    schedule();
+
+}
+
 void MessageLoader::schedule() {
    
     // Secure this method by a lock.
     std::lock_guard<std::mutex> guard(m_scheduling_mutex);
 
-    if (m_deserialization_buffering_threshold < m_message_queue_size || m_execution_pending || m_message_cursor_depleted) {
+    if (m_execution_pending) {
+        return;
+    }
+
+    if (!m_flush_pending && (m_deserialization_buffering_threshold < m_message_queue_size || m_terminal)) {
         return;
     }
 
@@ -101,56 +131,113 @@ bool MessageLoader::ready() {
 
 ros::CallbackInterface::CallResult MessageLoader::call() {
     
-    bool is_first_execution = false;
+    const double time_last_batch_end = m_time_last_batch_end.load();
+    
+    bsoncxx::builder::basic::document query_builder{};
+   
+    if (m_flush_pending) {
 
-    // The query has not been executed yet.
-    if (m_connection == nullptr) {
+        // Clear any already loaded messages.
+        m_message_queue.clear();
+        m_message_queue_size = 0;
 
-        // If there is an error, this flag won't be toggled back and this loader terminats.
-        m_message_cursor_depleted = true;
-        is_first_execution = true;
+        m_terminal = true;
+        m_flush_pending = false;
 
-        // Establish a non-thread save connection.
-        m_connection = ConnectionProvider::getConnection(m_connector_options); 
 
-    }  
+        query_builder.append(bsoncxx::builder::basic::kvp("metadata.time", 
+            [time_last_batch_end](bsoncxx::builder::basic::sub_document sub_document_builder) {
+                sub_document_builder.append(bsoncxx::builder::basic::kvp("$gte", time_last_batch_end));
+            }
+        ));
 
-    mongo::BSONObjBuilder query_time_constrains;
+        // Query from the re-rentry point onwards.
+        //query_time_constrains << "metadata.time" << mongo::GTE << m_time_last_batch_end.load();
 
-    // Consider start time constrains.
-    if (is_first_execution && m_query_time_start) {
-        query_time_constrains << "metadata.time" << mongo::GTE << m_query_time_start.value();
     } else {
-        query_time_constrains << "metadata.time" << mongo::GT << m_time_last_batch_end;
+        
+        const bool is_first_execution = time_last_batch_end == -1;
+
+        // Consider start time constrains.
+        if (is_first_execution && m_query_time_start) {
+
+            const double query_time_start = m_query_time_start.value();
+
+            query_builder.append(bsoncxx::builder::basic::kvp("metadata.time", 
+                [query_time_start](bsoncxx::builder::basic::sub_document sub_document_builder) {
+                    sub_document_builder.append(bsoncxx::builder::basic::kvp("$gte", query_time_start));
+                }
+            ));
+            // query_time_constrains << "metadata.time" << mongo::GTE << m_query_time_start.value();
+        } else {
+            query_builder.append(bsoncxx::builder::basic::kvp("metadata.time", 
+                [time_last_batch_end](bsoncxx::builder::basic::sub_document sub_document_builder) {
+                    sub_document_builder.append(bsoncxx::builder::basic::kvp("$gt", time_last_batch_end));
+                }
+            ));
+            // query_time_constrains << "metadata.time" << mongo::GT << m_time_last_batch_end.load();
+        }
+
     }
 
     // Consider end time constrains
+    // Note: If the end time is greater than the start time, the cursor will be empty and the loader is flagged as depleated.
     if (m_query_time_end) {
-        query_time_constrains << "metadata.time" << mongo::LT << m_query_time_end.value();
-    }
+        
+        const double query_time_end = m_query_time_end.value();;
 
-    mongo::BSONObjBuilder query_builder;
-    query_builder.appendElements(query_time_constrains.obj());
+        query_builder.append(bsoncxx::builder::basic::kvp("metadata.time", 
+            [query_time_end](bsoncxx::builder::basic::sub_document sub_document_builder) {
+                sub_document_builder.append(bsoncxx::builder::basic::kvp("$lt", query_time_end));
+            }
+        ));
+        //query_time_constrains << "metadata.time" << mongo::LT << m_query_time_end.value();
+    }
+    
+    //mongo::BSONObjBuilder query_builder;
+    //query_builder.appendElements(query_time_constrains.obj());
 
     if (m_query_structure) {
-        query_builder.appendElements(m_query_structure.value());
+        query_builder.append(bsoncxx::builder::concatenate(m_query_structure.value().view()));
     }
-    //
-
-    const mongo::BSONObj structure_query = query_builder.done();
+   
+    //const mongo::BSONObj structure_query = query_builder.done();
     //std::cout << "Query: " << structure_query.jsonString() << std::endl;
+    //const bsoncxx::document::value structure_query = m_query_structure.extract();
+    
+    mongocxx::options::find options_query;
+    options_query.sort(bsoncxx::builder::basic::make_document(bsoncxx::builder::basic::kvp("metadata.time", 1)));
+    // Sets the number of documents to fetch per batch from the database.
+    options_query.batch_size(m_query_buffering_batch_size);
+    // Limits the number of elements to return per query
+    options_query.limit(m_deserialization_buffering_batch_size);
+    // If the query is to big to be processed in main memory, we'll allow for
+    // processing to also utilize the hard disk.
+    options_query.allow_disk_use(true);
 
-    mongo::Query query(structure_query);
-    query.sort("metadata.time", 1);
-
+    //mongo::Query query(structure_query);
+    //query.sort("metadata.time", 1);
+    
 /*
     mongo::BSONObjBuilder dirty_hacks;
     dirty_hacks.appendElements(query.obj);
     dirty_hacks << "allowDiskUse" << true;
     query.obj = dirty_hacks.done();
     std::cout << "Query compiled: " << query.obj.jsonString() << std::endl;
-*/
+*/  
     
+    mongocxx::pool::entry client = robo_trace::store::Connector::instance().getClient();
+    // TODO: Database
+    //mongocxx::client& dc = *client;
+    //mongocxx::database& dx = dc.database(m_database);
+    mongocxx::cursor result = (*client)[m_database][m_collection].find(
+        // filter
+        query_builder.view(),
+        // options
+        options_query
+    );
+
+/*
     std::unique_ptr<mongo::DBClientCursor> message_cursor = m_connection->query(
         // ns
         m_collection_path, 
@@ -160,29 +247,39 @@ ros::CallbackInterface::CallResult MessageLoader::call() {
         m_deserialization_buffering_batch_size,
         // nToSkip
         0,
-        // fieldsToReturn (Note: That batch mode does not work here, since it 
-        // requires the same thread to always fetch the data.)
+        // fieldsToReturn
         0,
         // queryOptions
         0,
         // batchSize
         m_query_buffering_batch_size
     );
-    
+*/
     size_t message_idx = 0;
     
-    while(message_cursor->more()) {
+    for(mongocxx::cursor::iterator iterator = result.begin(); iterator != result.end(); ++iterator) {
 
-        mongo::BSONObj serialized_message = message_cursor->next();
+    //while(message_cursor->more()) {
+       
+        //mongo::BSONObj serialized_message = message_cursor->next();
+        const bsoncxx::document::view& serialized_message = *iterator;
         digest(serialized_message);
 
-        m_time_last_batch_end = serialized_message["metadata"]["time"]._numberDouble();
+        // ROS_INFO_STREAM(bsoncxx::to_json(serialized_message, bsoncxx::ExtendedJsonMode::k_relaxed));
+
+        // If there has been a flush, the field "m_time_last_batch_end" will hold
+        // the time of re-entry. Hence, we should avoid overwriting it.
+        if (m_flush_pending) {
+            break;
+        }
+
+        m_time_last_batch_end = serialized_message["metadata"]["time"].get_double();
         ++message_idx;
 
     }
 
     // We are done here. 
-    m_message_cursor_depleted = (message_idx < m_deserialization_buffering_batch_size);
+    m_terminal = !m_flush_pending && (message_idx < m_deserialization_buffering_batch_size);
     m_execution_pending = false;
     
     // Check reschedule if in the meantime someone consumed from the buffer.
@@ -192,29 +289,29 @@ ros::CallbackInterface::CallResult MessageLoader::call() {
 
 }
 
-void MessageLoader::digest(const mongo::BSONObj& serialized_message) {
+void MessageLoader::digest(const bsoncxx::document::view& serialized_message) {
 
     /*
         Reconstruct metadata wrapper.
     */
 
-    const mongo::BSONObj& metadata_serialized = serialized_message["metadata"].Obj();
-    const DataContainer::Ptr metadata_container = std::make_shared<DataContainer>(metadata_serialized); 
+    const bsoncxx::document::view metadata_serialized = serialized_message["metadata"].get_document().view();
+    const robo_trace::store::Container::Ptr metadata_container = std::make_shared<robo_trace::store::Container>(metadata_serialized); 
 
     /*
         Construct the processing context.
     */
 
-    const mongo::BSONObj& message_serialized = serialized_message["message"].Obj();
+    const bsoncxx::document::view message_serialized = serialized_message["message"].get_document().view();
     
-    const ProcessingContext::Ptr context = std::make_shared<ProcessingContext>(metadata_container);
+    const robo_trace::processing::Context::Ptr context = std::make_shared<robo_trace::processing::Context>(metadata_container);
     context->setSerializedMessage(message_serialized);
 
     /*
         Process  the message.
     */
     
-    for (const ProcessingStage::Ptr& processing_stage : m_processing_pipeline) {
+    for (const robo_trace::processing::Processor::Ptr& processing_stage : m_processing_pipeline) {
         processing_stage->process(context);
     }
   

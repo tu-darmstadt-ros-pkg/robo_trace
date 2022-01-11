@@ -7,26 +7,26 @@
 #include <openssl/evp.h>
 
 
-namespace robo_trace {
+namespace robo_trace::plugin::open_ssl {
 
-class OpenSSLSignatureStageConfiguration {
+class SignatureModuleConfiguration {
 
 public:
 
-    typedef std::shared_ptr<OpenSSLSignatureStageConfiguration> Ptr;
-    typedef std::shared_ptr<const OpenSSLSignatureStageConfiguration> ConstPtr;
+    typedef std::shared_ptr<SignatureModuleConfiguration> Ptr;
+    typedef std::shared_ptr<const SignatureModuleConfiguration> ConstPtr;
 
 public:
     
     /**
      * 
      */
-    OpenSSLSignatureStageConfiguration();
+    SignatureModuleConfiguration();
 
     /**
      * 
      */
-    ~OpenSSLSignatureStageConfiguration();
+    ~SignatureModuleConfiguration();
     
     /**
      * 

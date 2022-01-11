@@ -7,9 +7,9 @@
 #include <utility>
 #include <mutex>
 #include <optional>
-// MongoDB
-#include "robo_trace/config.h"
-#include <mongo/client/dbclient.h>
+// MongoCXX
+#include <bsoncxx/document/value.hpp>
+#include <bsoncxx/document/view.hpp>
 // Ros
 #include <ros/callback_queue_interface.h>
 // BabelFish
@@ -17,11 +17,10 @@
 // Project
 #include "robo_trace/util/ts_queue.hpp"
 #include "robo_trace/storage/container.hpp"
-#include "robo_trace/storage/options.hpp"
-#include "robo_trace/processing/stage/stage.hpp"
+#include "robo_trace/processing/processor.hpp"
 
 
-namespace robo_trace {
+namespace robo_trace::replay {
 
 class MessageLoader final : public ros::CallbackInterface, public std::enable_shared_from_this<MessageLoader> {
 
@@ -35,13 +34,13 @@ public:
     /**
      *
      */
-    MessageLoader(const ConnectionOptions::ConstPtr& connection_options, 
-                  const std::optional<mongo::BSONObj>& structure_query, 
-                  const std::string& collection_path, 
-                  std::vector<ProcessingStage::Ptr>& pipeline, 
+    MessageLoader(const std::string& collection, 
+                  const std::string& database,
+                  const std::vector<robo_trace::processing::Processor::Ptr>& pipeline, 
                   ros::CallbackQueueInterface* callback_queue,
                   const std::optional<double>& time_start,
-                  const std::optional<double>& time_end);
+                  const std::optional<double>& time_end,
+                  const std::optional<bsoncxx::document::value>& structure_query);
 
     /**
      *
@@ -54,10 +53,15 @@ public:
     bool isCompleted() const; 
 
     /**
+     * 
+     */
+    bool isValid() const;
+
+    /**
      *
      */
-    bool isBuffering() const;
-    
+    bool isLoading() const;
+
     /** 
      *
      */
@@ -94,6 +98,11 @@ public:
     void setDeserializationBufferingBatchSize(size_t size);
 
     /**
+     * 
+     */
+    void reset(const double time);
+
+    /**
      *
      */
     void schedule();
@@ -120,25 +129,25 @@ private:
     /**
      *
      */
-    void digest(const mongo::BSONObj& serialized_message);
+    void digest(const bsoncxx::document::view& serialized_message);
 
 private:
     
     /** */
-    const std::string m_collection_path;
+    const std::string m_collection;
+    /** */
+    const std::string m_database;
 
     /** */
-    const ConnectionOptions::ConstPtr m_connector_options;
+    const std::optional<double> m_query_time_start;
     /** */
-    const std::vector<ProcessingStage::Ptr> m_processing_pipeline;
-    
-    /** */
-    const std::optional<double>& m_query_time_start;
-    /** */
-    const std::optional<double>& m_query_time_end;
+    const std::optional<double> m_query_time_end;
      /** */
-    const std::optional<mongo::BSONObj>& m_query_structure; 
-
+    const std::optional<bsoncxx::document::value> m_query_structure; 
+   
+    /** */
+    const std::vector<robo_trace::processing::Processor::Ptr> m_processing_pipeline;
+   
     /** */
     std::mutex m_scheduling_mutex;
     /** */
@@ -154,13 +163,12 @@ private:
     /** */
     std::atomic<bool> m_execution_pending;
     /** */
-    std::atomic<bool> m_message_cursor_depleted;
+    std::atomic<bool> m_flush_pending;
     /** */
-    double m_time_last_batch_end;
-   
+    std::atomic<bool> m_terminal;
     /** */
-    std::shared_ptr<mongo::DBClientConnection> m_connection;
-        
+    std::atomic<double> m_time_last_batch_end;
+       
     /** */
     std::atomic<int> m_message_queue_size;
     /** */

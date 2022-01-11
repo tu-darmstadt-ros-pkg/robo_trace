@@ -4,8 +4,7 @@
 #include "rosgraph_msgs/Clock.h"
 
 
-namespace robo_trace {
-
+namespace robo_trace::replay {
 
 TimeManager::TimeManager(ros::NodeHandle& node_handle)
 : m_node_handle(node_handle),
@@ -17,11 +16,8 @@ TimeManager::TimeManager(ros::NodeHandle& node_handle)
     m_publication_publisher = m_node_handle.advertise<rosgraph_msgs::Clock>("clock", 1);
 
 }
-
     
-TimeManager::~TimeManager() {
-
-}
+TimeManager::~TimeManager() = default;
 
 bool TimeManager::isHorizonReached() {
     return ros::WallTime::now() > m_horizon_wc;

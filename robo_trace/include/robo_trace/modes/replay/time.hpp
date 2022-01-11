@@ -4,7 +4,7 @@
 #include <ros/ros.h>
 
 
-namespace robo_trace {
+namespace robo_trace::replay {
 
 class TimeManager {
 

@@ -15,6 +15,9 @@ find_package(catkin
     ros_babel_fish
 )
 
+find_package(bsoncxx REQUIRED)
+find_package(mongocxx REQUIRED)
+
 ###################################
 ## catkin specific configuration ##
 ###################################
@@ -65,26 +68,26 @@ set(
 
     include/${PROJECT_NAME}/signature/configuration.hpp
     src/signature/configuration.cpp
-    include/${PROJECT_NAME}/signature/descriptor.hpp
-    src/signature/descriptor.cpp
     include/${PROJECT_NAME}/signature/forward.hpp
     src/signature/forward.cpp
+    include/${PROJECT_NAME}/signature/descriptor.hpp
+    src/signature/descriptor.cpp
 
     include/${PROJECT_NAME}/encryption/full/configuration.hpp
     src/encryption/full/configuration.cpp
-    include/${PROJECT_NAME}/encryption/full/descriptor.hpp
-    src/encryption/full/descriptor.cpp
     include/${PROJECT_NAME}/encryption/full/forward.hpp
     src/encryption/full/forward.cpp
     include/${PROJECT_NAME}/encryption/full/backward.hpp
     src/encryption/full/backward.cpp
+    include/${PROJECT_NAME}/encryption/full/descriptor.hpp
+    src/encryption/full/descriptor.cpp
 
     include/${PROJECT_NAME}/encryption/partial/configuration.hpp
     src/encryption/partial/configuration.cpp
-    include/${PROJECT_NAME}/encryption/partial/descriptor.hpp
-    src/encryption/partial/descriptor.cpp
     include/${PROJECT_NAME}/encryption/partial/forward.hpp
     src/encryption/partial/forward.cpp
+    include/${PROJECT_NAME}/encryption/partial/descriptor.hpp
+    src/encryption/partial/descriptor.cpp
     include/${PROJECT_NAME}/encryption/partial/backward.hpp
     src/encryption/partial/backward.cpp
     
@@ -105,6 +108,7 @@ target_link_libraries(
   ${PROJECT_NAME} 
     ${catkin_LIBRARIES}
     OpenSSL::SSL
+    mongo::mongocxx_shared
 )
 
 

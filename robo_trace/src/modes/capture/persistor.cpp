@@ -5,23 +5,30 @@
 #include "robo_trace/storage/container.hpp"
 #include "robo_trace/processing/context.hpp"
 
+#ifdef RECORDING_SIGNAL_PIPELINE_PASS
+#include "std_msgs/Empty.h"
+#endif
 
-namespace robo_trace {
-    
 
-TopicPersistor::TopicPersistor(const RecorderOptions::ConstPtr options_recorder, const std::vector<ProcessingStage::Ptr>& pipeline, ros::NodeHandle& node_handle, const std::string& topic)
+namespace robo_trace::capture {  
+
+TopicPersistor::TopicPersistor(const Options::ConstPtr options_recorder, const std::vector<robo_trace::processing::Processor::Ptr>& pipeline, ros::NodeHandle& node_handle, const std::string& topic)
 :  m_topic(topic), m_options_recorder(options_recorder), m_node_handle(node_handle), m_pipeline(pipeline) {
-    //
+    
+#ifdef RECORDING_SIGNAL_PIPELINE_PASS
+    const std::string signal_pipeline_pass_topic_name = ros::names::append(RECORDING_SIGNAL_PIPELINE_PASS_TOPIC_PREFIX, topic);
+    m_publisher_signal_pipeline_pass = node_handle.advertise<std_msgs::Empty>(signal_pipeline_pass_topic_name, RECORDING_SIGNAL_PIPELINE_PASS_TOPIC_QUEUE_SIZE);
+#endif
+
 }
 
 TopicPersistor::~TopicPersistor() = default;
-
 
 const std::string& TopicPersistor::getTopic() const {
     return m_topic;
 }
 
-const std::vector<ProcessingStage::Ptr>& TopicPersistor::getPipeline() const {
+const std::vector<robo_trace::processing::Processor::Ptr>& TopicPersistor::getPipeline() const {
     return m_pipeline;
 }
 
@@ -67,7 +74,7 @@ void TopicPersistor::process(const ros::MessageEvent<const ros_babel_fish::Babel
     m_messages_received_local += 1;
     // m_messages_received_total += 1;
 
-    DataContainer::Ptr metadata_container = std::make_shared<DataContainer>();
+    robo_trace::store::Container::Ptr metadata_container = std::make_shared<robo_trace::store::Container>();
     
     // Nice... Technically, we could get all the topic here from the connectio header...
     // ROS_INFO_STREAM("Def: " << event.getConnectionHeader()["message_definition"]);
@@ -82,10 +89,10 @@ void TopicPersistor::process(const ros::MessageEvent<const ros_babel_fish::Babel
     // Create containers for message and associated metadata.
     const ros_babel_fish::BabelFishMessage::ConstPtr msg = event.getConstMessage(); 
 
-    ProcessingContext::Ptr context = std::make_shared<ProcessingContext>(metadata_container);
+    robo_trace::processing::Context::Ptr context = std::make_shared<robo_trace::processing::Context>(metadata_container);
     context->setUnserializedMessage(msg);
     
-    for (const ProcessingStage::Ptr& processing_stage : m_pipeline) {
+    for (const robo_trace::processing::Processor::Ptr& processing_stage : m_pipeline) {
         
         processing_stage->process(context);
 
@@ -94,6 +101,11 @@ void TopicPersistor::process(const ros::MessageEvent<const ros_babel_fish::Babel
         }
 
     }
+
+#ifdef RECORDING_SIGNAL_PIPELINE_PASS
+    const std_msgs::Empty pipeline_pass_signal;
+    m_publisher_signal_pipeline_pass.publish(pipeline_pass_signal);
+#endif
    
 }
 

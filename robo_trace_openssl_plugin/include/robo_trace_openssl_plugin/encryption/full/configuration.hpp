@@ -5,26 +5,26 @@
 #include <memory>
 
 
-namespace robo_trace {
+namespace robo_trace::plugin::open_ssl {
 
-class OpenSSLFullEncryptionConfiguration {
+class FullEncryptionModuleConfiguration {
 
 public:
 
-    typedef std::shared_ptr<OpenSSLFullEncryptionConfiguration> Ptr;
-    typedef std::shared_ptr<const OpenSSLFullEncryptionConfiguration> ConstPtr;
+    typedef std::shared_ptr<FullEncryptionModuleConfiguration> Ptr;
+    typedef std::shared_ptr<const FullEncryptionModuleConfiguration> ConstPtr;
 
 public:
     
     /**
      * 
      */
-    OpenSSLFullEncryptionConfiguration();
+    FullEncryptionModuleConfiguration();
 
     /**
      * 
      */
-    ~OpenSSLFullEncryptionConfiguration();
+    ~FullEncryptionModuleConfiguration();
     
     /**
      * 

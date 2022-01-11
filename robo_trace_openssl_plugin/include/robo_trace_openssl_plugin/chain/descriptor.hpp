@@ -6,44 +6,44 @@
 // Ros
 #include <ros/ros.h>
 // Project
-#include "robo_trace/processing/stage/descriptor.hpp"
+#include "robo_trace/processing/descriptor.hpp"
 #include "robo_trace_openssl_plugin/key_manager.hpp"
 #include "robo_trace_openssl_plugin/chain/configuration.hpp"
 
 
-namespace robo_trace { 
+namespace robo_trace::plugin::open_ssl { 
 
-class OpenSSLHashChainStageDescriptor final : public ProcessingStageDescriptor {
+class HashChainStageModuleDescriptor final : public robo_trace::processing::Descriptor {
 
 public:
 
     /**
      * TODO
      */
-    OpenSSLHashChainStageDescriptor(const OpenSSLPluginKeyManager::Ptr& key_manager, const ros::NodeHandle& stages_namespace);
+    HashChainStageModuleDescriptor(const KeyManager::Ptr& key_manager, const ros::NodeHandle& stages_namespace);
 
     /**
      * TODO
      */
-    virtual ~OpenSSLHashChainStageDescriptor();
+    virtual ~HashChainStageModuleDescriptor();
 
     /**
      * 
      */
-    virtual bool isModeSupported(const ProcessingMode mode) const final override;
+    virtual bool isModeSupported(const robo_trace::processing::Mode mode) const final override;
 
     /**
      * 
      */
-    virtual std::optional<ProcessingStage::Ptr> getStage(const DataContainer::Ptr& summary, const ProcessingMode mode) final override;
+    virtual std::optional<robo_trace::processing::Processor::Ptr> getStage(const robo_trace::store::Container::Ptr& summary, const robo_trace::processing::Mode mode) final override;
 
   
 protected:
 
     /** */
-    OpenSSLPluginKeyManager::Ptr m_key_manager;
+    KeyManager::Ptr m_key_manager;
     /** */
-    OpenSSLHashChainConfiguration::Ptr m_configuration;
+    HashChainModuleConfiguration::Ptr m_configuration;
     
 };
 

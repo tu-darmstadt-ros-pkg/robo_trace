@@ -17,7 +17,8 @@ set(MongoDB_PossibleIncludePaths
   /opt/mongo/include/
   $ENV{ProgramFiles}/Mongo/*/include
   $ENV{SystemDrive}/Mongo/*/include
-  )
+)
+
 find_path(MongoDB_INCLUDE_DIR mongo/client/dbclient.h
   ${MongoDB_PossibleIncludePaths})
 

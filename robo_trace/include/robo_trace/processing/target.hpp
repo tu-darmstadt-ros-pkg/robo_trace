@@ -1,6 +1,6 @@
 #pragma once
 
-namespace robo_trace {
+namespace robo_trace::processing {
 
 enum ProcessingTarget {
     /** */

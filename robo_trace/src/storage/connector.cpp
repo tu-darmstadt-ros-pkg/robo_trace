@@ -2,55 +2,49 @@
 #include "robo_trace/storage/connector.hpp"
 // Std
 #include <string>
+#include <sstream>
 #include <stdexcept>
+#include <iostream>
+// MongoDB
+#include <bsoncxx/stdx/make_unique.hpp>
 // Ros
 #include <ros/console.h>
 
 
-namespace robo_trace {
+namespace robo_trace::store {
 
+Connector& Connector::instance() {
+    
+    static Connector instance;
 
-void ConnectionProvider::initialize() {
+    return instance;
+}
+
+Connector::Connector() = default;
+
+Connector::~Connector() = default;
+
+void Connector::configure(const Options::ConstPtr& options) {
     
-    /*
-        Simply initializes the mongo driver.    
-    */
+    m_driver_instance = bsoncxx::stdx::make_unique<mongocxx::instance>();
+
+    std::stringstream cs;
+    // Database location
+    cs << "mongodb://" << options->m_host_name << ":" << std::to_string(options->m_host_port) << "/?";
+    // Pool size
+    cs << "minPoolSize=" << std::to_string(options->m_connection_pool_size_min) << "&";
+    cs << "maxPoolSize=" << std::to_string(options->m_connection_pool_size_max) << "&";
+    // Timeout
+    cs << "serverSelectionTimeoutMS=" << std::to_string(options->m_connection_timeout_ms);
     
-    mongo::client::initialize();
+    std::cout << cs.str() << std::endl;
+    const mongocxx::uri uri = mongocxx::uri{cs.str()};
+    m_pool = bsoncxx::stdx::make_unique<mongocxx::pool>(std::move(uri));
 
 }
 
-std::shared_ptr<mongo::DBClientConnection> ConnectionProvider::getConnection(const ConnectionOptions::ConstPtr& options) {
-
-    const std::string database_address = options->m_database_server_host + ":" + std::to_string(options->m_database_server_port); 
-    const ros::WallTime connect_timeout = ros::WallTime::now() + ros::WallDuration(options->m_database_server_connection_timeout);
-    
-    std::shared_ptr<mongo::DBClientConnection> connection;
-
-    while (ros::ok() && ros::WallTime::now() < connect_timeout) {
-
-        connection.reset(new mongo::DBClientConnection());
-        
-        try {
-            
-            connection->connect(database_address);
-            
-            if (!connection->isFailed()) {
-                break;
-            }
-
-        } catch (mongo::ConnectException& e) {
-            ros::Duration(1.0).sleep();
-        }
-
-    }
-
-    if (!connection || connection->isFailed()) {
-        throw std::runtime_error("Failed connecting to database.");
-    }
-
-    return connection;
-
+mongocxx::pool::entry Connector::getClient() {
+    return m_pool->acquire();
 }
 
 }

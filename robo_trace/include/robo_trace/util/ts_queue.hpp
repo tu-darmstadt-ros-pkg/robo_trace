@@ -78,6 +78,19 @@ private:
         }
     }
 
+    void clear() {
+
+        std::unique_ptr<node> empty_node(new node());
+        
+        {
+            std::scoped_lock head_lock(head_mutex);
+            std::scoped_lock tail_lock(tail_mutex);
+            head = std::move(empty_node);
+            tail = head.get();
+        }
+       
+    }
+
     std::optional<T> limeted_wait_for_pop()
     {
         std::unique_lock head_lock(head_mutex);

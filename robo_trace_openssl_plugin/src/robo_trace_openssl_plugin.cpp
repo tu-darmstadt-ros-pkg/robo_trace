@@ -3,49 +3,49 @@
 // PluginLib
 #include <pluginlib/class_list_macros.h>
 // Project
-#include "robo_trace_openssl_plugin/chain/descriptor.hpp"
+#include "robo_trace_openssl_plugin/chain/descriptor.hpp" 
 #include "robo_trace_openssl_plugin/signature/descriptor.hpp"
-#include "robo_trace_openssl_plugin/encryption/full/descriptor.hpp"
-#include "robo_trace_openssl_plugin/encryption/partial/descriptor.hpp"
+#include "robo_trace_openssl_plugin/encryption/full/descriptor.hpp" 
+#include "robo_trace_openssl_plugin/encryption/partial/descriptor.hpp" 
 
 
-namespace robo_trace {
+namespace robo_trace::plugin::open_ssl {
 
 RoboTraceOpenSSLPlugin::RoboTraceOpenSSLPlugin() 
-: RoboTraceProcessingPlugin("RoboTraceOpenSSLPlugin") {
+: robo_trace::processing::Plugin("RoboTraceOpenSSLPlugin") {
     //
 }
 
 RoboTraceOpenSSLPlugin::~RoboTraceOpenSSLPlugin() = default;
 
-const OpenSSLPluginKeyManager::Ptr& RoboTraceOpenSSLPlugin::getKeyManager() const {
+const KeyManager::Ptr& RoboTraceOpenSSLPlugin::getKeyManager() const {
     return m_key_manager;
 }
 
-std::vector<ProcessingStageDescriptor::Ptr> RoboTraceOpenSSLPlugin::setup() {
+std::vector<robo_trace::processing::Descriptor::Ptr> RoboTraceOpenSSLPlugin::setup() {
 
     /*
         Load and generate keys.
     */
 
-    m_key_manager = std::make_shared<OpenSSLPluginKeyManager>(m_plugin_node_handle);
+    m_key_manager = std::make_shared<KeyManager>(m_plugin_node_handle);
 
     /*
         Setup processing stages
     */
 
-    std::vector<ProcessingStageDescriptor::Ptr> descriptors;
+    std::vector<robo_trace::processing::Descriptor::Ptr> descriptors;
 
-    std::shared_ptr<OpenSSLHashChainStageDescriptor> descriptor_hash_chain = std::make_shared<OpenSSLHashChainStageDescriptor>(m_key_manager, m_stage_node_handle);
+    std::shared_ptr<HashChainStageModuleDescriptor> descriptor_hash_chain = std::make_shared<HashChainStageModuleDescriptor>(m_key_manager, m_stage_node_handle);
     descriptors.push_back(descriptor_hash_chain);
-    
-    std::shared_ptr<OpenSSLSignatureStageDescriptor> descriptor_signature = std::make_shared<OpenSSLSignatureStageDescriptor>(m_key_manager, m_stage_node_handle);
+
+    std::shared_ptr<SignatureModuleDescriptor> descriptor_signature = std::make_shared<SignatureModuleDescriptor>(m_key_manager, m_stage_node_handle);
     descriptors.push_back(descriptor_signature);
-    
-    std::shared_ptr<OpenSSLFullEncryptionStageDescriptor> descriptor_full_encryption = std::make_shared<OpenSSLFullEncryptionStageDescriptor>(m_key_manager, m_stage_node_handle);
+
+    std::shared_ptr<FullEncryptionModuleDescriptor> descriptor_full_encryption = std::make_shared<FullEncryptionModuleDescriptor>(m_key_manager, m_stage_node_handle);
     descriptors.push_back(descriptor_full_encryption);
-    
-    std::shared_ptr<OpenSSLPartialEncryptionStageDescriptor> descriptor_partial_encryption =  std::make_shared<OpenSSLPartialEncryptionStageDescriptor>(m_key_manager, m_stage_node_handle);
+      
+    std::shared_ptr<PartialEncryptionModuleDescriptor> descriptor_partial_encryption =  std::make_shared<PartialEncryptionModuleDescriptor>(m_key_manager, m_stage_node_handle);
     descriptors.push_back(descriptor_partial_encryption);
 
     return descriptors;
@@ -54,4 +54,4 @@ std::vector<ProcessingStageDescriptor::Ptr> RoboTraceOpenSSLPlugin::setup() {
 
 }
 
-PLUGINLIB_EXPORT_CLASS(robo_trace::RoboTraceOpenSSLPlugin, robo_trace::RoboTraceProcessingPlugin)
+PLUGINLIB_EXPORT_CLASS(robo_trace::plugin::open_ssl::RoboTraceOpenSSLPlugin, robo_trace::processing::Plugin)

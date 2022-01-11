@@ -5,10 +5,9 @@
 #include <stdexcept>
 
 
-namespace robo_trace {
+namespace robo_trace::plugin::open_ssl {
 
-
-OpenSSLSignatureForwardStage::OpenSSLSignatureForwardStage(const OpenSSLSignatureStageConfiguration::Ptr& configuration, const OpenSSLPluginKeyManager::Ptr& key_manager) 
+SignatureForwardProcessor::SignatureForwardProcessor(const SignatureModuleConfiguration::Ptr& configuration, const KeyManager::Ptr& key_manager) 
 : m_configuration(configuration), m_key_manager(key_manager) {
 
     m_signing_context = EVP_MD_CTX_new();
@@ -25,15 +24,15 @@ OpenSSLSignatureForwardStage::OpenSSLSignatureForwardStage(const OpenSSLSignatur
 
 }
 
-OpenSSLSignatureForwardStage::~OpenSSLSignatureForwardStage() {
+SignatureForwardProcessor::~SignatureForwardProcessor() {
     EVP_MD_CTX_free(m_signing_context);
 }
 
-ProcessingMode OpenSSLSignatureForwardStage::getMode() const {
-    return ProcessingMode::CAPTURE;
+robo_trace::processing::Mode SignatureForwardProcessor::getMode() const {
+    return robo_trace::processing::Mode::CAPTURE;
 }
 
-void OpenSSLSignatureForwardStage::process(const ProcessingContext::Ptr& context) {
+void SignatureForwardProcessor::process(const robo_trace::processing::Context::Ptr& context) {
     /*
         
         A good overview on signatures with OpenSSL can be found in 

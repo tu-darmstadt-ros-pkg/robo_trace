@@ -2,28 +2,28 @@
 #include "robo_trace_openssl_plugin/chain/configuration.hpp"
 
 
-namespace robo_trace {
+namespace robo_trace::plugin::open_ssl {
 
 
-OpenSSLHashChainConfiguration::OpenSSLHashChainConfiguration() = default;
+HashChainModuleConfiguration::HashChainModuleConfiguration() = default;
 
-OpenSSLHashChainConfiguration::~OpenSSLHashChainConfiguration() = default;
+HashChainModuleConfiguration::~HashChainModuleConfiguration() = default;
 
 
-const std::string& OpenSSLHashChainConfiguration::getHashingMehtodName() const {
+const std::string& HashChainModuleConfiguration::getHashingMehtodName() const {
     return hashing_method_name;
 }
 
-void OpenSSLHashChainConfiguration::setHashingMethodName(const std::string name) {
+void HashChainModuleConfiguration::setHashingMethodName(const std::string name) {
     hashing_method_name = name;
 }
 
 
-const std::string& OpenSSLHashChainConfiguration::getHashingResultStorageKey() const {
+const std::string& HashChainModuleConfiguration::getHashingResultStorageKey() const {
     return hashing_result_storage_key;
 }
 
-void OpenSSLHashChainConfiguration::setHashingResultStorageKey(const std::string key) {
+void HashChainModuleConfiguration::setHashingResultStorageKey(const std::string key) {
     hashing_result_storage_key = key;
 }
 

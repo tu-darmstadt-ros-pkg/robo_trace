@@ -8,9 +8,9 @@
 #include <ros/console.h>
 
 
-namespace robo_trace {
+namespace robo_trace::plugin::open_ssl {
 
-OpenSSLHashChainValidationStage::OpenSSLHashChainValidationStage(const OpenSSLHashChainConfiguration::Ptr& configuration, const OpenSSLPluginKeyManager::Ptr& key_manager, const DataContainer::Ptr& data) 
+HashChainValidationProcessor::HashChainValidationProcessor(const HashChainModuleConfiguration::Ptr& configuration, const KeyManager::Ptr& key_manager, const robo_trace::store::Container::Ptr& data) 
 : m_configuration(configuration) {
     
     m_hashing_context = EVP_MD_CTX_new();
@@ -52,16 +52,16 @@ OpenSSLHashChainValidationStage::OpenSSLHashChainValidationStage(const OpenSSLHa
 
 }
 
-OpenSSLHashChainValidationStage::~OpenSSLHashChainValidationStage() {
+HashChainValidationProcessor::~HashChainValidationProcessor() {
     // Can not be a nullptr as constructor terminated with except if so.
     EVP_MD_CTX_free(m_hashing_context);
 }
 
-ProcessingMode OpenSSLHashChainValidationStage::getMode() const {
-    return ProcessingMode::VALIDATE;
+robo_trace::processing::Mode HashChainValidationProcessor::getMode() const {
+    return robo_trace::processing::Mode::VALIDATE;
 }
 
-void OpenSSLHashChainValidationStage::process(const ProcessingContext::Ptr& context) {
+void HashChainValidationProcessor::process(const robo_trace::processing::Context::Ptr& context) {
 
     if (!EVP_DigestInit_ex(m_hashing_context, m_hashing_method, nullptr)) {
         throw std::runtime_error("Failed to initialize hashing context!");

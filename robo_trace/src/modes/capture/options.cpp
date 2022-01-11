@@ -8,10 +8,10 @@
 
 namespace po = boost::program_options;
 
-namespace robo_trace {
+namespace robo_trace::capture {
 
 
-RecorderOptions::RecorderOptions() 
+Options::Options() 
 : m_capture_all(false),
   m_capture_node(false),
   m_capture_topics_by_regex(false),
@@ -21,10 +21,10 @@ RecorderOptions::RecorderOptions()
 
 };
 
-RecorderOptions::~RecorderOptions() = default;
+Options::~Options() = default;
 
 
-void RecorderOptions::load(const ros::NodeHandle& node_handle) {
+void Options::load(const ros::NodeHandle& node_handle) {
 
     ros::NodeHandle capture_namespace(node_handle, "capture");
    
@@ -33,7 +33,7 @@ void RecorderOptions::load(const ros::NodeHandle& node_handle) {
     capture_namespace.getParam("topics", m_capture_topics);
 
     m_capture_node = capture_namespace.hasParam("node");
-    capture_namespace.getParam("node", m_capture_node);
+    capture_namespace.getParam("node", m_capture_node_name);
     
     if (capture_namespace.hasParam("exclude")) {
        
@@ -51,7 +51,7 @@ void RecorderOptions::load(const ros::NodeHandle& node_handle) {
     
 }
 
-void RecorderOptions::setup(po::options_description& description) {
+void Options::setup(po::options_description& description) {
 
     description.add_options()
         ("all,a", "Record all topics")
@@ -69,9 +69,7 @@ void RecorderOptions::setup(po::options_description& description) {
 
 }
 
-
-
-void RecorderOptions::load(po::variables_map& options) {
+void Options::load(po::variables_map& options) {
 
     if (options.count("all")) {
         m_capture_all = true;
@@ -163,7 +161,7 @@ void RecorderOptions::load(po::variables_map& options) {
 
 }   
 
-void RecorderOptions::validate() {
+void Options::validate() {
 
     if (!m_capture_all && m_capture_topics.size() == 0 && m_capture_node_name == "") {
         std::cout << "Not capturing anything." << std::endl; exit(0);

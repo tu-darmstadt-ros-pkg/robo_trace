@@ -16,7 +16,7 @@ robo_trace:
     database: "robo_trace"
     port: 27017
     host: "localhost"
-    timeout: 10.0
+    timeout: 2.0
     summary_collection: "__metadata__"
 
   # Pipeline configuration
@@ -31,19 +31,21 @@ robo_trace:
       # Stage sequence for this version
       sequence:
         # Requires the "robo_trace_openssl_plugins" plugin to be loaded.
-        #- "openssl_partial_encryption"
+        - "openssl_partial_encryption"
         #- "openssl_full_encryption"
-        - "downsampling"
-        - "basic_marshaller"
-        - "blob_decoupling"
-        #- "openssl_hash_chain"
-        #- "openssl_signature"
+        #- "downsampling"
+        # - "basic_marshaller"
+        # - "blob_decoupling"
+        - "openssl_hash_chain"
+        - "openssl_signature"
 
   # Plugins
   plugins:
   
     "RoboTraceOpenSSLPlugin":
-      
+      # The plugins namespace, i.e. robo_trace::plugin::open_ssl::RoboTraceOpenSSLPlugin  
+      namespace: "robo_trace::plugin::open_ssl"
+
       openssl_keys:
         authority_public_key: |
           -----BEGIN PUBLIC KEY-----
@@ -85,18 +87,18 @@ robo_trace:
         capture_every_2sec:
           # Match either against 'topic' or 'type' (message_type) 
           matching: 'type'
-          regex: '.*'
+          regex: '.*Image.*'
           priority: 1
           strategy: 'time'
           # Capture every 2 seconds
-          value: 2.0
+          value: 1.0
 
     openssl_hash_chain:
       hashing_method: "SHA256"
       result_storage_key: "hash"
     
     openssl_signature:
-      hashing_method: "SHA256"
+      hashing_method: "SHA1"
       input_store_key: "hash"
       result_storage_key: "sig"
 

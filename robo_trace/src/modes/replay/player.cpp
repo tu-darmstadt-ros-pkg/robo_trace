@@ -1,55 +1,24 @@
 // Base
 #include "robo_trace/modes/replay/player.hpp"
-// Std
-#include <vector>
-// MongoDB
-#include "robo_trace/config.h"
-#include <mongo/client/dbclientinterface.h>
+// MongoCXX
+#include <bsoncxx/document/view.hpp>
+#include <mongocxx/client.hpp>
+#include <mongocxx/database.hpp>
+#include <mongocxx/collection.hpp>
 // Project
-#include "robo_trace/parameters.hpp"
-#include "robo_trace/modes/modes.hpp"
-#include "robo_trace/storage/container.hpp"
-#include "robo_trace/storage/query.hpp"
 #include "robo_trace/storage/connector.hpp"
-#include "robo_trace/processing/stage/stage.hpp"
 
 
-namespace robo_trace {
+namespace robo_trace::replay {
 
-RoboTracePlayer::RoboTracePlayer(ros::NodeHandle& system_node_handle)
+PlayerBase::PlayerBase(ros::NodeHandle& system_node_handle)
 : m_system_node_handle(system_node_handle), m_time_manager(system_node_handle) {
-    //   
+    //
 }
 
-RoboTracePlayer::~RoboTracePlayer() = default;
+PlayerBase::~PlayerBase() = default;
 
-
-bool RoboTracePlayer::isCompleted() const {
-    return std::all_of(std::begin(m_message_publishers), std::end(m_message_publishers),
-        [](const MessagePublisher::Ptr& publisher) {
-            return publisher->isCompleted();
-        }
-    );
-}
-
-bool RoboTracePlayer::isToBePlayedBack(const std::string& topic) const {
-
-    if (m_options_player->m_replay_topics.empty()) {
-        return true;
-    }
-
-    return std::find(
-            // first
-            std::begin(m_options_player->m_replay_topics), 
-            // last
-            std::end(m_options_player->m_replay_topics), 
-            // value
-            topic
-           ) != std::end(m_options_player->m_replay_topics);
-
-}
-
-void RoboTracePlayer::initialize(int argc, char** argv) {
+void PlayerBase::initialize(int argc, char** argv) {
 
     if (!m_system_node_handle.ok()) {
         return;
@@ -59,10 +28,10 @@ void RoboTracePlayer::initialize(int argc, char** argv) {
         Load the program options.
     */
 
-    m_options_player = std::make_shared<PlayerOptions>();
-    m_options_connection = std::make_shared<ConnectionOptions>();
+    m_options_player = std::make_shared<robo_trace::replay::Options>();
+      m_options_connection = std::make_shared<robo_trace::store::Options>();
 
-    OptionsContainer::load({m_options_player, m_options_connection}, m_system_node_handle, argc, argv);
+    robo_trace::util::Options::load({m_options_player, m_options_connection}, m_system_node_handle, argc, argv);
 
     /*
         Initialize the pipeline constructor.
@@ -71,110 +40,84 @@ void RoboTracePlayer::initialize(int argc, char** argv) {
     m_pipeline_constructor.initialize(m_options_connection, m_system_node_handle);
 
     /*
-        Get a connection to the database.
+        Setup the MongoDB driver.
     */
 
-    ConnectionProvider::initialize();
-
-    const std::shared_ptr<mongo::DBClientConnection> connection = ConnectionProvider::getConnection(m_options_connection); 
+    robo_trace::store::Connector::instance().configure(m_options_connection);
 
     /*
-        Build base a query for the messages. Currently this query only constrains time.
-
-        TODO: Allow for injecting other constrains.
+        Initialize the loader spinner.
     */
 
-    std::optional<double> time_start = {};
-    std::optional<double> time_end = {};
-    
-    if (m_options_player->m_time_start || m_options_player->m_time_duration) {
+    m_loader_callback_queue = std::make_unique<ros::CallbackQueue>();
+    // TODO: Option in the config file.
+    m_loader_spinner = std::make_unique<ros::AsyncSpinner>(1, m_loader_callback_queue.get());
 
-        std::optional<double> recording_start_time = getRecordStartTime(connection);
+    m_loader_spinner->start();
 
-        ros::spinOnce();
+    /*
+        If we are not in detached mode, play right away.
+    */
 
-        if (!m_system_node_handle.ok()) {
-            return;
-        }
+    initialize();
 
-        // Should only be a nullopt if no topic matches or the recording is empty.
-        if (!recording_start_time) {
-            std::cout << "No topics to play back." << std::endl; exit(0);
-        }
+}
 
-        double time_adjusted_start = recording_start_time.value_or(0) + m_options_player->m_time_start.value_or(0);
+void PlayerBase::initialize() {
+    // 
+}
 
-        if (m_options_player->m_time_start) {
-            time_start = time_adjusted_start;
-        }
-
-        if (m_options_player->m_time_duration) {
-            time_end = time_adjusted_start + m_options_player->m_time_duration.value();
-        }
-
-    }
+void PlayerBase::setup(const std::optional<float> time_start, const std::optional<float> time_end) {
 
     /*
         Load topic specific publishers.
     */
 
-    const std::string summary_collection_path = m_options_connection->m_database_name + "." +  m_options_connection->m_summary_collection_name;
-    // Fetch everything from the global summary collection.
-    std::unique_ptr<mongo::DBClientCursor> recording_summary_cursor = connection->query(
-        // ns
-        summary_collection_path
-        // query
-        // TODO: We could constrain the query i.e. by only considering topics that have messages after 
-        //  the start time or at least started after that time point.
-    );
+    mongocxx::pool::entry client = robo_trace::store::Connector::instance().getClient();
+    mongocxx::cursor result = (*client)[m_options_connection->m_database_name][m_options_connection->m_collection_name_summary].find({});
 
-    std::cout << "Loading recording information. Topics to be played back are:" << std::endl;
+    for(mongocxx::cursor::iterator iterator = result.begin(); iterator != result.end(); ++iterator) {
 
-    while (recording_summary_cursor->more()) {
-
-        const mongo::BSONObj topic_recording_info = recording_summary_cursor->next();
-        const DataContainer::Ptr topic_data = std::make_shared<DataContainer>(topic_recording_info);
-
+        const bsoncxx::document::view& topic_recording_info = *iterator;
+   
         /*
             Should we playback this topic?
         */
 
-        const std::string topic_name = topic_recording_info["topic"].str();
-        std::cout << " - " << topic_name << std::endl;
-
+        const std::string topic_name = topic_recording_info["topic"].get_utf8().value.to_string();
+        
         if (!isToBePlayedBack(topic_name)) {
             continue;
         }
-
+    
         /*
             Construct the backward processing pipeline.
         */
 
-        std::vector<ProcessingStage::Ptr> pipeline_stages = m_pipeline_constructor.construct(ProcessingMode::REPLAY, topic_data, topic_name);
+        const robo_trace::store::Container::Ptr topic_data = std::make_shared<robo_trace::store::Container>(topic_recording_info);
+        std::vector<robo_trace::processing::Processor::Ptr> pipeline_stages = m_pipeline_constructor.construct(robo_trace::processing::Mode::REPLAY, topic_data, topic_name);
         
         /*
             Construct the message loader.
         */ 
      
-        const std::string collection_name = topic_recording_info["collection"].str();
-        const std::string collection_path = m_options_connection->m_database_name + "." + collection_name;
-
+        const std::string collection_name = topic_recording_info["collection"].get_utf8().value.to_string();
+        
         MessageLoader::Ptr loader = std::make_shared<MessageLoader>(
-            // connector
-            m_options_connection,
-            // query,
-            std::nullopt,
             // collection
-            collection_path,
+            collection_name,
+            // database
+            m_options_connection->m_database_name,
             // pipeline
             pipeline_stages,
             // callback_queue
-            // TODO: Don't use the global queue here.
-            (ros::CallbackQueueInterface*) ros::getGlobalCallbackQueue(),
+            (ros::CallbackQueueInterface*) m_loader_callback_queue.get(),
             // start_time
             time_start,
             // end_time
-            time_end
+            time_end,
+            // query,
+            std::nullopt
         );
         loader->schedule();
 
@@ -183,16 +126,18 @@ void RoboTracePlayer::initialize(int argc, char** argv) {
         */
 
         MessagePublisher::Ptr publisher = std::make_shared<MessagePublisher>(
+            // loader
+            loader,
+            // data
+            topic_data,
             // fish
             m_babel_fish,
             // handle,
             m_system_node_handle,
-            // options
-            m_options_player,
-            // loader
-            loader,
-            // data
-            topic_data
+            // topic prefix
+            m_options_player->m_topic_prefix,
+            // topic queue size
+            m_options_player->m_topic_queue_size
         );
         m_message_publishers.push_back(std::move(publisher));
 
@@ -208,88 +153,13 @@ void RoboTracePlayer::initialize(int argc, char** argv) {
 
     }
 
-    if (m_message_publishers.empty()) {
-        std::cout << " - No topics to play back!" << std::endl; exit(0);
-    }
-
-    /*
-        Sleep for some duration after advertising the topics. 
-    */
-
-    if (!m_options_player->m_wait_duration_after_advertise.isZero()) {
-        std::cout << "Waiting " << m_options_player->m_wait_duration_after_advertise.toSec() << " seconds after advertising topics..." << std::flush;   
-        m_options_player->m_wait_duration_after_advertise.sleep();
-        std::cout << " done." << std::endl;
-    }
-
-
-    // Wait until all publishers have finished buffering.
-    buffer();
-
-    // Sort in the publishers for timely orderd playback.
-    for (MessagePublisher::Ptr publisher : m_message_publishers) {
-        if (publisher->isCompleted()) {
-            continue;
-        } else {
-            m_publishing_queue.push(publisher);
-        }
-    }
-
-    play();
-
 }
 
-std::optional<double> RoboTracePlayer::getRecordStartTime() {
-    return getRecordStartTime(ConnectionProvider::getConnection(m_options_connection));
+bool PlayerBase::isToBePlayedBack(const std::string& topic) const {
+    return true;
 }
 
-std::optional<double> RoboTracePlayer::getRecordStartTime(const std::shared_ptr<mongo::DBClientConnection> connection) {
-
-    /*
-        Query the summary collection.
-    */
-
-    mongo::Query mongo_query;  
-    mongo_query.sort("start_time", 1);
-
-    const std::string summary_collection_path = m_options_connection->m_database_name + "." +  m_options_connection->m_summary_collection_name;
-    // Fetch everything from the global summary collection.
-    std::unique_ptr<mongo::DBClientCursor> recording_summary_cursor = connection->query(
-        // namespace
-        summary_collection_path,
-        // query
-        mongo_query
-        // nToReturn 
-        // 1 - We can't do this as some topics may be selected specifically
-    );
-
-    /*
-        Find the earliest message time, while respecting the topic selection list.
-    */
-
-    std::optional<double> start_time = {};
-
-    while (recording_summary_cursor->more()) {
-
-        const mongo::BSONObj topic_recording_info = recording_summary_cursor->next();
-        const std::string topic_name = topic_recording_info["topic"].str();
-
-        if (!isToBePlayedBack(topic_name)) {
-            continue;
-        }
-
-        double topic_start_time = topic_recording_info["start_time"].numberDouble();
-
-        if (!start_time || topic_start_time < start_time.value()) {
-            start_time = topic_start_time;
-        } 
-
-    }
-
-    return start_time;
-}
-
-void RoboTracePlayer::buffer() {
+void PlayerBase::buffer() {
 
     // Whait while the loaders have completed buffering.
     for (;;) {
@@ -318,59 +188,126 @@ void RoboTracePlayer::buffer() {
 
 }
 
-void RoboTracePlayer::play() {
+std::optional<double> PlayerBase::getFirstMessageTime() {
+    return getMessageTimeLimit(PlayerBase::MessagePosition::First);
+}
 
-    if (m_options_player->m_publish_clock_frequency) {
-        m_time_manager.setTimePublishFrequency(m_options_player->m_publish_clock_frequency.value());
-    }
+std::optional<double> PlayerBase::getLastMessageTime() {
+    return getMessageTimeLimit(PlayerBase::MessagePosition::Last);
+}
 
-    ROS_INFO_STREAM("Starting playing: " << m_publishing_queue.top()->getNextPublicationTime().value_or(0));
+std::optional<double> PlayerBase::getMessageTimeLimit(const PlayerBase::MessagePosition& position) {
 
-    if(!m_publishing_queue.empty()) {
-        
-        const MessagePublisher::Ptr message_publisher = m_publishing_queue.top();
-        
-        const ros::Time start_time(message_publisher->getNextPublicationTime().value()); 
-        m_time_manager.setStartTimeReal(start_time);
+    mongocxx::pool::entry client = robo_trace::store::Connector::instance().getClient();
+    mongocxx::cursor result = (*client)[m_options_connection->m_database_name][m_options_connection->m_collection_name_summary].find({});
 
-    }
+    /*
+        Find the latest message time.
+    */
 
-    ros::WallTime now_wt = ros::WallTime::now();
-    m_time_manager.setStartTimeTranslated(ros::Time(now_wt.sec, now_wt.nsec));
+    std::optional<double> extreme_time = {};
 
-    ROS_INFO_STREAM("Starting publishing");
+    for(mongocxx::cursor::iterator iterator = result.begin(); iterator != result.end(); ++iterator) {
 
-    while(!m_publishing_queue.empty()) {
-        
-        if (!m_system_node_handle.ok()) {
-            return;
-        }
+        const bsoncxx::document::view& topic_recording_info = *iterator;
+        const std::string topic_name = topic_recording_info["topic"].get_utf8().value.to_string();
 
-        const MessagePublisher::Ptr message_publisher = m_publishing_queue.top();
-        m_publishing_queue.pop();
-
-        const double time = message_publisher->getNextPublicationTime().value();
-        const ros::Time time_original(time); 
-        m_time_manager.setExecutionHorizon(time_original);
-        
-        ros::spinOnce();
-
-        while(!m_time_manager.isHorizonReached()) {
-            m_time_manager.run(ros::WallDuration(.1));
-            ros::spinOnce();
-        } 
-
-        message_publisher->publish();
-        
-        if (message_publisher->isCompleted()) {
+        if (!isToBePlayedBack(topic_name)) {
             continue;
         }
 
-        m_publishing_queue.push(message_publisher);
+        const std::string collection_name = topic_recording_info["collection"].get_utf8().value.to_string();
+        const std::string collection_path = m_options_connection->m_database_name + "." + collection_name;
+        
+        mongocxx::options::find options_query;
+
+        switch(position) {
+            case PlayerBase::MessagePosition::First : {
+                options_query.sort(bsoncxx::builder::basic::make_document(bsoncxx::builder::basic::kvp("metadata.time", 1)));
+                break;
+            }
+            case PlayerBase::MessagePosition::Last : {
+                options_query.sort(bsoncxx::builder::basic::make_document(bsoncxx::builder::basic::kvp("metadata.time", -1)));
+                break;
+            }
+        }
+        
+        bsoncxx::stdx::optional<bsoncxx::document::value> result = (*client)[m_options_connection->m_database_name][collection_path].find_one(
+            // filter
+            {},
+            // options
+            options_query
+        );
+
+        if (!result) {
+            continue;
+        }
+
+        const bsoncxx::document::view serialized_message = result.value().view();
+        const double message_time = serialized_message["metadata"]["time"].get_double();
+
+        switch(position) {
+            case PlayerBase::MessagePosition::First : {
+                if (!extreme_time || message_time < extreme_time.value()) {
+                    extreme_time = message_time;
+                } 
+                break;
+            }
+            case PlayerBase::MessagePosition::Last : {
+                if (!extreme_time || extreme_time.value() < message_time) {
+                    extreme_time = message_time;
+                } 
+                break;
+            }
+        }
+       
 
     }
 
+    return extreme_time;
+
 }
 
+std::optional<double> PlayerBase::getRecordingStartTime() {
+
+    
+
+    /*
+        Query the summary collection.
+    */
+
+    mongocxx::options::find options_query;
+    options_query.sort(bsoncxx::builder::basic::make_document(bsoncxx::builder::basic::kvp("metadata.time", 1)));
+
+    mongocxx::pool::entry client = robo_trace::store::Connector::instance().getClient();
+    mongocxx::cursor result = (*client)[m_options_connection->m_database_name][m_options_connection->m_collection_name_summary].find(
+        // filter
+        {},
+        // options
+        options_query
+    );
+
+    /*
+        Find the earliest message time.
+    */
+
+    std::optional<double> start_time = {};
+
+    for(mongocxx::cursor::iterator iterator = result.begin(); iterator != result.end(); ++iterator) {
+
+        const bsoncxx::document::view& topic_recording_info = *iterator;
+        const std::string topic_name = topic_recording_info["topic"].get_utf8().value.to_string();
+
+        double topic_start_time = topic_recording_info["start_time"].get_double();
+
+        if (!start_time || topic_start_time < start_time.value()) {
+            start_time = topic_start_time;
+        } 
+
+    }
+
+    return start_time;
+
+}
 
 }

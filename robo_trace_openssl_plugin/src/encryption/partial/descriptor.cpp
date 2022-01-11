@@ -8,21 +8,21 @@
 #include "robo_trace_openssl_plugin/encryption/partial/backward.hpp"
  
 
-namespace robo_trace {
+namespace robo_trace::plugin::open_ssl {
 
-OpenSSLPartialEncryptionStageDescriptor::OpenSSLPartialEncryptionStageDescriptor(const OpenSSLPluginKeyManager::Ptr& key_manager, const ros::NodeHandle& stages_namespace)
-: OpenSSLPartialEncryptionStageDescriptor(key_manager, stages_namespace, std::make_shared<ros_babel_fish::IntegratedDescriptionProvider>()) {
+PartialEncryptionModuleDescriptor::PartialEncryptionModuleDescriptor(const KeyManager::Ptr& key_manager, const ros::NodeHandle& stages_namespace)
+: PartialEncryptionModuleDescriptor(key_manager, stages_namespace, std::make_shared<ros_babel_fish::IntegratedDescriptionProvider>()) {
     //
 }
 
-OpenSSLPartialEncryptionStageDescriptor::OpenSSLPartialEncryptionStageDescriptor(const OpenSSLPluginKeyManager::Ptr& key_manager, const ros::NodeHandle& stages_namespace, const ros_babel_fish::DescriptionProvider::Ptr message_description_provider) 
-: ProcessingStageDescriptor(stages_namespace, "openssl_partial_encryption"), m_key_manager(key_manager), m_message_description_provider(message_description_provider) {
+PartialEncryptionModuleDescriptor::PartialEncryptionModuleDescriptor(const KeyManager::Ptr& key_manager, const ros::NodeHandle& stages_namespace, const ros_babel_fish::DescriptionProvider::Ptr message_description_provider) 
+: robo_trace::processing::Descriptor(stages_namespace, "openssl_partial_encryption"), m_key_manager(key_manager), m_message_description_provider(message_description_provider) {
     
     /*
         Create and load basic parameters of the configuration.
     */
 
-    m_configuration = std::make_shared<OpenSSLPartialEncryptionConfiguration>();
+    m_configuration = std::make_shared<PartialEncryptionModuleConfiguration>();
 
     m_configuration->setEnryptionMethod(m_handle.param<std::string>(ROS_PARAM_ENCRYPTION_METHOD_NAME, ROS_PARAM_ENCRYPTION_METHOD_DEFAULT));
     
@@ -32,7 +32,7 @@ OpenSSLPartialEncryptionStageDescriptor::OpenSSLPartialEncryptionStageDescriptor
 
     std::string delimiter = ".";
 
-    std::unordered_map<std::string, OpenSSLPartialEncryptionConfiguration::EncryptionTarget::Ptr>& encryption_target_tree = m_configuration->getEncryptionTargetsTree();
+    std::unordered_map<std::string, PartialEncryptionModuleConfiguration::EncryptionTarget::Ptr>& encryption_target_tree = m_configuration->getEncryptionTargetsTree();
 
     XmlRpc::XmlRpcValue target_message_type_list;
     m_handle.getParam("encryption_targets", target_message_type_list);
@@ -52,9 +52,9 @@ OpenSSLPartialEncryptionStageDescriptor::OpenSSLPartialEncryptionStageDescriptor
             continue;
         }
         
-        const OpenSSLPartialEncryptionConfiguration::EncryptionTarget::Ptr& target_tree_root = std::make_shared<OpenSSLPartialEncryptionConfiguration::EncryptionTarget>();
+        const PartialEncryptionModuleConfiguration::EncryptionTarget::Ptr& target_tree_root = std::make_shared<PartialEncryptionModuleConfiguration::EncryptionTarget>();
         
-        std::pair<std::string, OpenSSLPartialEncryptionConfiguration::EncryptionTarget::Ptr> target_tree_root_record(target_message_type, target_tree_root);
+        std::pair<std::string, PartialEncryptionModuleConfiguration::EncryptionTarget::Ptr> target_tree_root_record(target_message_type, target_tree_root);
         encryption_target_tree.insert(target_tree_root_record);
 
         // No need to copy here
@@ -80,7 +80,7 @@ OpenSSLPartialEncryptionStageDescriptor::OpenSSLPartialEncryptionStageDescriptor
             }
             path.push_back(enryption_target);
             
-            OpenSSLPartialEncryptionConfiguration::EncryptionTarget::Ptr current_tree_node = target_tree_root;
+            PartialEncryptionModuleConfiguration::EncryptionTarget::Ptr current_tree_node = target_tree_root;
 
             for (size_t target_idx = 0; target_idx < path.size(); target_idx++) {
                 
@@ -92,14 +92,14 @@ OpenSSLPartialEncryptionStageDescriptor::OpenSSLPartialEncryptionStageDescriptor
                 // Nest down
                 } else {
 
-                    std::unordered_map<std::string, OpenSSLPartialEncryptionConfiguration::EncryptionTarget::Ptr>::const_iterator target = current_tree_node->children.find(current_element);
+                    std::unordered_map<std::string, PartialEncryptionModuleConfiguration::EncryptionTarget::Ptr>::const_iterator target = current_tree_node->children.find(current_element);
 
                     if (target == current_tree_node->children.end()) {
                         
                         //  // current_tree_node = encryption_targets.emplace(current_element)->first->second;
-                        OpenSSLPartialEncryptionConfiguration::EncryptionTarget::Ptr new_tree_node = std::make_shared<OpenSSLPartialEncryptionConfiguration::EncryptionTarget>();
+                        PartialEncryptionModuleConfiguration::EncryptionTarget::Ptr new_tree_node = std::make_shared<PartialEncryptionModuleConfiguration::EncryptionTarget>();
         
-                        std::pair<std::string, OpenSSLPartialEncryptionConfiguration::EncryptionTarget::Ptr> new_tree_node_record(current_element, new_tree_node);
+                        std::pair<std::string, PartialEncryptionModuleConfiguration::EncryptionTarget::Ptr> new_tree_node_record(current_element, new_tree_node);
                         current_tree_node->children.insert(new_tree_node_record);
 
                         current_tree_node = new_tree_node;
@@ -118,20 +118,20 @@ OpenSSLPartialEncryptionStageDescriptor::OpenSSLPartialEncryptionStageDescriptor
     
 }
 
-OpenSSLPartialEncryptionStageDescriptor::~OpenSSLPartialEncryptionStageDescriptor() = default;
+PartialEncryptionModuleDescriptor::~PartialEncryptionModuleDescriptor() = default;
 
-bool OpenSSLPartialEncryptionStageDescriptor::isModeSupported(const ProcessingMode mode) const {
-    return mode == ProcessingMode::CAPTURE || mode == ProcessingMode::REPLAY;
+bool PartialEncryptionModuleDescriptor::isModeSupported(const robo_trace::processing::Mode mode) const {
+    return mode == robo_trace::processing::Mode::CAPTURE || mode == robo_trace::processing::Mode::REPLAY;
 }
 
-std::optional<ProcessingStage::Ptr> OpenSSLPartialEncryptionStageDescriptor::getStage(const DataContainer::Ptr& summary, const ProcessingMode mode) {
+std::optional<robo_trace::processing::Processor::Ptr> PartialEncryptionModuleDescriptor::getStage(const robo_trace::store::Container::Ptr& summary, const robo_trace::processing::Mode mode) {
     switch(mode) {
 
-        case ProcessingMode::CAPTURE : 
-            return std::make_shared<OpenSSLPartialEncryptionForwardStage>(m_configuration, m_key_manager, m_message_description_provider, summary);
+        case robo_trace::processing::Mode::CAPTURE : 
+            return std::make_shared<PartialEncryptionForwardProcessor>(m_configuration, m_key_manager, m_message_description_provider, summary);
 
-         case ProcessingMode::REPLAY : 
-            return std::make_shared<OpenSSLPartialEncryptionBackwardStage>(m_configuration, m_key_manager, m_message_description_provider, summary);
+        case robo_trace::processing::Mode::REPLAY : 
+            return std::make_shared<PartialEncryptionBackwardProcessor>(m_configuration, m_key_manager, m_message_description_provider, summary);
         
         // TODO: We need a validate stage too.
         default: 

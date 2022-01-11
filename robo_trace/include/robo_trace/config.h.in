@@ -37,7 +37,7 @@
  * \author Ioan Sucan
  */
 #pragma once
-
+/*
 #cmakedefine01 MongoDB_EXPOSE_MACROS
 
 #if MongoDB_EXPOSE_MACROS
@@ -48,3 +48,5 @@
 #else
 #  include <mongo/client/gridfs.h>
 #endif
+
+*/

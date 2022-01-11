@@ -5,43 +5,43 @@
 #include <ros_babel_fish/message_description.h>
 #include <ros_babel_fish/generation/description_provider.h> 
 // Project
-#include "robo_trace/processing/stage/stage.hpp"
+#include "robo_trace/processing/processor.hpp"
 #include "robo_trace_openssl_plugin/key_manager.hpp"
 #include "robo_trace_openssl_plugin/encryption/full/configuration.hpp"
 
 
-namespace robo_trace {
+namespace robo_trace::plugin::open_ssl {
 
-class OpenSSLFullEncryptionBackwardStage final : public ProcessingStage {
+class FullEncryptionBackwardProcessor final : public robo_trace::processing::Processor {
 
 public:
 
     /**
      * TODO
      */
-    OpenSSLFullEncryptionBackwardStage(const OpenSSLFullEncryptionConfiguration::Ptr& configuration, const OpenSSLPluginKeyManager::Ptr& key_manager, const ros_babel_fish::DescriptionProvider::Ptr& message_description_provider, const DataContainer::Ptr& metadata);
+    FullEncryptionBackwardProcessor(const FullEncryptionModuleConfiguration::Ptr& configuration, const KeyManager::Ptr& key_manager, const ros_babel_fish::DescriptionProvider::Ptr& message_description_provider, const robo_trace::store::Container::Ptr& metadata);
 
     /**
      * TODO
      */
-    virtual ~OpenSSLFullEncryptionBackwardStage();
+    virtual ~FullEncryptionBackwardProcessor();
   
     /**
      *
      */
-    virtual ProcessingMode getMode() const final override;
+    virtual robo_trace::processing::Mode getMode() const final override;
   
     /**
      * TODO
      */
-    virtual void process(const ProcessingContext::Ptr& context) final override;
+    virtual void process(const robo_trace::processing::Context::Ptr& context) final override;
 
 private:
 
     /** */
-    const OpenSSLFullEncryptionConfiguration::Ptr m_configuration;
+    const FullEncryptionModuleConfiguration::Ptr m_configuration;
     /** */
-    const OpenSSLPluginKeyManager::Ptr m_key_manager;
+    const KeyManager::Ptr m_key_manager;
     /** */
     ros_babel_fish::MessageDescription::ConstPtr m_message_description;
     

@@ -5,12 +5,12 @@
 // OpenSSL
 #include <openssl/evp.h>
 // Project
-#include "robo_trace/processing/stage/stage.hpp"
+#include "robo_trace/processing/processor.hpp"
 #include "robo_trace_openssl_plugin/key_manager.hpp"
 #include "robo_trace_openssl_plugin/encryption/full/configuration.hpp"
 
 
-namespace robo_trace {
+namespace robo_trace::plugin::open_ssl {
 
 /**
  * Implements a hash chaining stage based on the SHA256 algorithm.
@@ -20,36 +20,36 @@ namespace robo_trace {
  * 
  * This is stage must be executed in a blocking fashion! Only one 
  */
-class OpenSSLFullEncryptionForwardStage final : public ProcessingStage {
+class FullEncryptionForwardProcessor final : public robo_trace::processing::Processor {
 
 public:
 
     /**
      * TODO
      */
-    OpenSSLFullEncryptionForwardStage(const OpenSSLFullEncryptionConfiguration::Ptr& configuration, const OpenSSLPluginKeyManager::Ptr& key_manager, const DataContainer::Ptr& metadata);
+    FullEncryptionForwardProcessor(const FullEncryptionModuleConfiguration::Ptr& configuration, const KeyManager::Ptr& key_manager, const robo_trace::store::Container::Ptr& metadata);
 
     /**
      * TODO
      */
-    virtual ~OpenSSLFullEncryptionForwardStage();
+    virtual ~FullEncryptionForwardProcessor();
   
     /**
      *
      */
-    virtual ProcessingMode getMode() const final override;
+    virtual robo_trace::processing::Mode getMode() const final override;
   
     /**
      * TODO
      */
-    virtual void process(const ProcessingContext::Ptr& context) final override;
+    virtual void process(const robo_trace::processing::Context::Ptr& context) final override;
 
 private:
 
     /** */
-    const OpenSSLFullEncryptionConfiguration::Ptr m_configuration;
+    const FullEncryptionModuleConfiguration::Ptr m_configuration;
     /** */
-    const OpenSSLPluginKeyManager::Ptr m_key_manager;
+    const KeyManager::Ptr m_key_manager;
 
     /** */
     std::vector<unsigned char> m_key;

@@ -5,26 +5,26 @@
 #include <memory>
 
 
-namespace robo_trace {
+namespace robo_trace::plugin::open_ssl {
 
-class OpenSSLHashChainConfiguration final {
+class HashChainModuleConfiguration final {
 
 public:
 
-    typedef std::shared_ptr<OpenSSLHashChainConfiguration> Ptr;
-    typedef std::shared_ptr<const OpenSSLHashChainConfiguration> ConstPtr;
+    typedef std::shared_ptr<HashChainModuleConfiguration> Ptr;
+    typedef std::shared_ptr<const HashChainModuleConfiguration> ConstPtr;
 
 public:
     
     /**
      * 
      */
-    OpenSSLHashChainConfiguration();
+    HashChainModuleConfiguration();
 
     /**
      * 
      */
-    ~OpenSSLHashChainConfiguration();
+    ~HashChainModuleConfiguration();
     
     /**
      * 

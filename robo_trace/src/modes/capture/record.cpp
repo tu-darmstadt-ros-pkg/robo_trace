@@ -20,7 +20,7 @@ int main(int argc, char** argv) {
 
     ros::NodeHandle m_system_node_handle("robo_trace");
     
-    robo_trace::RoboTraceRecorder recorder(m_system_node_handle);
+    robo_trace::capture::Recorder recorder(m_system_node_handle);
     recorder.initialize(argc, argv);
     
     ros::AsyncSpinner spinner(8);

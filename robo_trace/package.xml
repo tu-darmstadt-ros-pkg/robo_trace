@@ -26,7 +26,11 @@
   <depend>ros_babel_fish</depend>
   <depend>ddynamic_reconfigure</depend>
   <depend>rosgraph_msgs</depend>
-
+  <depend>robo_trace_msgs</depend>
+  
+  <exec_depend>genmsg</exec_depend>
+  
+  
   <export>
     <nodelet plugin="${prefix}/nodelet_plugins.xml" />
   </export>

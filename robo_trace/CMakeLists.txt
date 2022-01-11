@@ -5,9 +5,9 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_C_FLAGS "-Wall -Wno-unused-result -Wno-unknown-pragmas -Wno-unused-variable -Wfatal-errors -fPIC ${CMAKE_C_FLAGS}")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-list(APPEND 
-  CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/"
-)
+#list(APPEND 
+#  CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/"
+#)
 
 find_package(catkin 
   REQUIRED COMPONENTS
@@ -17,6 +17,7 @@ find_package(catkin
     ros_babel_fish
     rosgraph_msgs
     ddynamic_reconfigure
+    robo_trace_msgs
 )
 
 find_package(Boost 
@@ -25,16 +26,18 @@ find_package(Boost
     regex
 )
 
-find_package(MongoDB REQUIRED)
+#find_package(MongoDB REQUIRED)
+find_package(bsoncxx REQUIRED)
+find_package(mongocxx REQUIRED)
 
 if (CMAKE_COMPILER_IS_GNUCC)
   add_compile_options(-O1)
 endif()
 
-include(CheckIncludeFileCXX)
-check_include_file_cxx("mongo/version.h" HAVE_MONGO_VERSION_H)
+#include(CheckIncludeFileCXX)
+#check_include_file_cxx("mongo/version.h" HAVE_MONGO_VERSION_H)
 
-file(MAKE_DIRECTORY "${CATKIN_DEVEL_PREFIX}/include")
+#file(MAKE_DIRECTORY "${CATKIN_DEVEL_PREFIX}/include")
 
 ###################################
 ## catkin specific configuration ##
@@ -53,8 +56,10 @@ catkin_package(
     ros_babel_fish
     rosgraph_msgs
     ddynamic_reconfigure
+    robo_trace_msgs
   DEPENDS
-    ${MONGO_EXPORT}
+     ${LIBMONGOCXX_EXPORT}
+#    ${MONGO_EXPORT}
 )
 
 
@@ -62,21 +67,22 @@ catkin_package(
 ## Build ##
 ###########
 
-if (NOT MongoDB_EXPOSE_MACROS)
-  add_definitions(-DMONGO_EXPOSE_MACROS)
-endif()
+#if (NOT MongoDB_EXPOSE_MACROS)
+#  add_definitions(-DMONGO_EXPOSE_MACROS)
+#endif()
 
-configure_file(
-  "include/${PROJECT_NAME}/config.h.in" 
-  "${CATKIN_DEVEL_PREFIX}/include/${PROJECT_NAME}/config.h"
-)
+#configure_file(
+#  "include/${PROJECT_NAME}/config.h.in" 
+#  "${CATKIN_DEVEL_PREFIX}/include/${PROJECT_NAME}/config.h"
+#)
 
 include_directories(
   ${CATKIN_DEVEL_PREFIX}/include
   include
   ${catkin_INCLUDE_DIRS}
   ${Boost_INCLUDE_DIRS}
-  ${MongoDB_INCLUDE_DIR}
+#  ${MongoDB_INCLUDE_DIR}
+  ${LIBMONGOCXX_INCLUDE_DIRS}
 )
 
 set(
@@ -91,73 +97,73 @@ set(
     include/${PROJECT_NAME}/util/smart_ptr_conversions.hpp
     include/${PROJECT_NAME}/util/ts_queue.hpp
 
+    include/${PROJECT_NAME}/storage/options.hpp
+    src/storage/options.cpp
     include/${PROJECT_NAME}/storage/container.hpp
     src/storage/container.cpp
     include/${PROJECT_NAME}/storage/connector.hpp
     src/storage/connector.cpp
-    include/${PROJECT_NAME}/storage/options.hpp
-    src/storage/options.cpp
+#[[
     include/${PROJECT_NAME}/storage/query.hpp
     src/storage/query.cpp
     include/${PROJECT_NAME}/storage/result.hpp
     src/storage/result.cpp
+]]
 
-    include/${PROJECT_NAME}/modes/modes.hpp
-    
+    include/${PROJECT_NAME}/processing/mode.hpp
     include/${PROJECT_NAME}/processing/context.hpp
     src/processing/context.cpp
+    include/${PROJECT_NAME}/processing/processor.hpp
+    src/processing/processor.cpp
+    include/${PROJECT_NAME}/processing/descriptor.hpp
+    src/processing/descriptor.cpp
+    include/${PROJECT_NAME}/processing/plugin.hpp
+    src/processing/plugin.cpp
+    include/${PROJECT_NAME}/processing/variant.hpp
+    src/processing/variant.cpp
+    include/${PROJECT_NAME}/processing/constructor.hpp
+    src/processing/constructor.cpp
 
-    include/${PROJECT_NAME}/processing/plugin/plugin.hpp
-    src/processing/plugin/plugin.cpp
+    include/${PROJECT_NAME}/processing/modules/measurement/delegate.hpp
+    src/processing/modules/measurement/delegate.cpp
 
-    include/${PROJECT_NAME}/processing/pipeline/descriptor.hpp
-    src/processing/pipeline/descriptor.cpp
-    include/${PROJECT_NAME}/processing/pipeline/constructor.hpp
-    src/processing/pipeline/constructor.cpp
+    include/${PROJECT_NAME}/processing/modules/marshalling/forward.hpp
+    src/processing/modules/marshalling/forward.cpp
+    include/${PROJECT_NAME}/processing/modules/marshalling/backward.hpp
+    src/processing/modules/marshalling/backward.cpp
+    include/${PROJECT_NAME}/processing/modules/marshalling/descriptor.hpp
+    src/processing/modules/marshalling/descriptor.cpp
 
-    include/${PROJECT_NAME}/processing/stage/stage.hpp
-    src/processing/stage/stage.cpp
-    include/${PROJECT_NAME}/processing/stage/descriptor.hpp
-    src/processing/stage/descriptor.cpp
+    include/${PROJECT_NAME}/processing/modules/downsampling/forward_count.hpp
+    src/processing/modules/downsampling/forward_count.cpp
+    include/${PROJECT_NAME}/processing/modules/downsampling/forward_time.hpp
+    src/processing/modules/downsampling/forward_time.cpp
+    include/${PROJECT_NAME}/processing/modules/downsampling/descriptor.hpp
+    src/processing/modules/downsampling/descriptor.cpp
+    include/${PROJECT_NAME}/processing/modules/downsampling/configuration.hpp
+    src/processing/modules/downsampling/configuration.cpp
 
-    include/${PROJECT_NAME}/processing/stage/marshalling/forward.hpp
-    src/processing/stage/marshalling/forward.cpp
-    include/${PROJECT_NAME}/processing/stage/marshalling/backward.hpp
-    src/processing/stage/marshalling/backward.cpp
-    include/${PROJECT_NAME}/processing/stage/marshalling/descriptor.hpp
-    src/processing/stage/marshalling/descriptor.cpp
+    include/${PROJECT_NAME}/processing/modules/storage/forward.hpp
+    src/processing/modules/storage/forward.cpp
+    include/${PROJECT_NAME}/processing/modules/storage/descriptor.hpp
+    src/processing/modules/storage/descriptor.cpp
 
+ #[[
     include/${PROJECT_NAME}/processing/stage/blob/forward.hpp
     src/processing/stage/blob/forward.cpp
     include/${PROJECT_NAME}/processing/stage/blob/backward.hpp
     src/processing/stage/blob/backward.cpp
     include/${PROJECT_NAME}/processing/stage/blob/descriptor.hpp
     src/processing/stage/blob/descriptor.cpp
-
-    include/${PROJECT_NAME}/processing/stage/downsampling/forward_count.hpp
-    src/processing/stage/downsampling/forward_count.cpp
-    include/${PROJECT_NAME}/processing/stage/downsampling/forward_time.hpp
-    src/processing/stage/downsampling/forward_time.cpp
-    include/${PROJECT_NAME}/processing/stage/downsampling/descriptor.hpp
-    src/processing/stage/downsampling/descriptor.cpp
-    include/${PROJECT_NAME}/processing/stage/downsampling/configuration.hpp
-    src/processing/stage/downsampling/configuration.cpp
-
-    include/${PROJECT_NAME}/processing/stage/measurement/delegate.hpp
-    src/processing/stage/measurement/delegate.cpp
-
-    include/${PROJECT_NAME}/processing/stage/storage/descriptor.hpp
-    src/processing/stage/storage/descriptor.cpp
-    include/${PROJECT_NAME}/processing/stage/storage/forward.hpp
-    src/processing/stage/storage/forward.cpp
-
+]]
+    
     include/${PROJECT_NAME}/modes/capture/options.hpp
     src/modes/capture/options.cpp
     include/${PROJECT_NAME}/modes/capture/persistor.hpp
     src/modes/capture/persistor.cpp
-    include/${PROJECT_NAME}/modes/capture/recorder.hpp
+     include/${PROJECT_NAME}/modes/capture/recorder.hpp
     src/modes/capture/recorder.cpp
-
+   
     include/${PROJECT_NAME}/modes/replay/options.hpp
     src/modes/replay/options.cpp
     include/${PROJECT_NAME}/modes/replay/loader.hpp
@@ -168,11 +174,20 @@ set(
     src/modes/replay/time.cpp
     include/${PROJECT_NAME}/modes/replay/player.hpp
     src/modes/replay/player.cpp
+    include/${PROJECT_NAME}/modes/replay/cli/player.hpp
+    src/modes/replay/cli/player.cpp
+     include/${PROJECT_NAME}/modes/replay/service/player.hpp
+    src/modes/replay/service/player.cpp
 
+#[[
+
+    include/${PROJECT_NAME}/modes/replay/util.hpp
+    src/modes/replay/util.cpp
 
 
     #src/robo_trace_node.cpp
     #src/robo_trace_nodelet.cpp
+]]
 )
 
 add_library(
@@ -187,11 +202,14 @@ add_dependencies(
 )
 
 target_link_libraries(
-  robo_trace
+  robo_trace # PRIVATE
     ${catkin_LIBRARIES}
     ${Boost_LIBRARIES}
-    ${MongoDB_LIBRARIES}
+    mongo::mongocxx_shared
+    #${MongoDB_LIBRARIES}
+    # ${LIBMONGOCXX_LIBRARIES}
 )
+
 
 add_executable(
   record 
@@ -202,10 +220,17 @@ target_link_libraries(record robo_trace)
 
 add_executable(
   play 
-    src/modes/replay/play.cpp
+    src/modes/replay/cli/play.cpp
 )
 
 target_link_libraries(play robo_trace)
+
+add_executable(
+  remote 
+    src/modes/replay/service/serve.cpp
+)
+
+target_link_libraries(remote robo_trace)
 
 
 #############
@@ -232,7 +257,7 @@ install(
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
-
+#[[
 install(
   TARGETS 
     record
@@ -240,7 +265,7 @@ install(
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-)
+)]]
 
 install(
   FILES 

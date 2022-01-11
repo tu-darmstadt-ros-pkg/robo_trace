@@ -9,21 +9,19 @@
 // Project
 #include "robo_trace/storage/connector.hpp"
 #include "robo_trace/storage/container.hpp"
-#include "robo_trace/processing/stage/storage/descriptor.hpp"
+#include "robo_trace/processing/modules/storage/descriptor.hpp"
 
 
-namespace robo_trace {
+namespace robo_trace::capture {
 
-RoboTraceRecorder::RoboTraceRecorder(ros::NodeHandle& system_node_handle) 
+Recorder::Recorder(ros::NodeHandle& system_node_handle) 
 : m_system_node_handle(system_node_handle) {
     //
 }
 
-RoboTraceRecorder::~RoboTraceRecorder() {
+Recorder::~Recorder() = default;
 
-}
-
-void RoboTraceRecorder::initialize(int argc, char** argv) {
+void Recorder::initialize(int argc, char** argv) {
 
     if (!m_system_node_handle.ok()) {
         return;
@@ -33,18 +31,18 @@ void RoboTraceRecorder::initialize(int argc, char** argv) {
         Load the program options.
     */
 
-    m_option_recorder = std::make_shared<RecorderOptions>();
-    m_options_connection = std::make_shared<ConnectionOptions>();
+    m_option_recorder = std::make_shared<robo_trace::capture::Options>();
+    m_options_connection = std::make_shared<robo_trace::store::Options>();
 
-    OptionsContainer::load({m_option_recorder, m_options_connection}, m_system_node_handle, argc, argv);
+    robo_trace::util::Options::load({m_option_recorder, m_options_connection}, m_system_node_handle, argc, argv);
 
     /*
         Initialize the storage stage.
     */
     
-    ConnectionProvider::initialize();
+    robo_trace::store::Connector::instance().configure(m_options_connection);
     
-    m_storage_stage_descriptor = std::make_shared<StorageStageDescriptor>(m_options_connection, m_system_node_handle);
+    m_storage_stage_descriptor = std::make_shared<robo_trace::processing::StorageModuleDescriptor>(m_options_connection, m_system_node_handle);
 
     /*
         Initialize the pipeline constructor.
@@ -56,12 +54,12 @@ void RoboTraceRecorder::initialize(int argc, char** argv) {
         Kick-Off recording feedback loops.
     */
 
-    m_check_topics_timer = m_system_node_handle.createTimer(ros::Duration(m_option_recorder->m_capture_topic_check_period), &RoboTraceRecorder::onCheckForNewTopics, this);
+    m_check_topics_timer = m_system_node_handle.createTimer(ros::Duration(m_option_recorder->m_capture_topic_check_period), &Recorder::onCheckForNewTopics, this);
    
 }
 
 
-void RoboTraceRecorder::onCheckForNewTopics(const ros::TimerEvent& event) {
+void Recorder::onCheckForNewTopics(const ros::TimerEvent& event) {
 
     /*
         Check master for new topics. It may be the case that we simply record 
@@ -146,7 +144,7 @@ void RoboTraceRecorder::onCheckForNewTopics(const ros::TimerEvent& event) {
 
 }
 
-void RoboTraceRecorder::record(const ros::master::TopicInfo& topic_info) {
+void Recorder::record(const ros::master::TopicInfo& topic_info) {
 
     const std::string& topic = topic_info.name;
     const std::string& message_type = topic_info.datatype;
@@ -157,7 +155,7 @@ void RoboTraceRecorder::record(const ros::master::TopicInfo& topic_info) {
         Build up topic summary container.
     */
 
-    DataContainer::Ptr topic_recording_summary = std::make_shared<DataContainer>();
+    robo_trace::store::Container::Ptr topic_recording_summary = std::make_shared<robo_trace::store::Container>();
     topic_recording_summary->append("topic", topic);
     topic_recording_summary->append("message_type", message_type);
     // Taking the time here should be okay. It is only used by playback to determine the approx. overall start time.
@@ -167,10 +165,10 @@ void RoboTraceRecorder::record(const ros::master::TopicInfo& topic_info) {
         Construct the pipeline.
     */
     
-    std::vector<ProcessingStage::Ptr> pipeline_stages = m_pipeline_constructor.construct(ProcessingMode::CAPTURE, topic_recording_summary, topic);
+    std::vector<robo_trace::processing::Processor::Ptr> pipeline_stages = m_pipeline_constructor.construct(robo_trace::processing::Mode::CAPTURE, topic_recording_summary, topic);
      
     // The storage stage is added manually.
-    const ProcessingStage::Ptr storage_stage = m_storage_stage_descriptor->getStage(topic_recording_summary, ProcessingMode::CAPTURE).value();
+    const robo_trace::processing::Processor::Ptr storage_stage = m_storage_stage_descriptor->getStage(topic_recording_summary, robo_trace::processing::Mode::CAPTURE).value();
     pipeline_stages.push_back(storage_stage);
     
     // The persistor will handle subscription and pipeline invocation.
@@ -187,13 +185,21 @@ void RoboTraceRecorder::record(const ros::master::TopicInfo& topic_info) {
     
 }
 
-bool RoboTraceRecorder::isToBeRecorded(const std::string& topic, const bool is_capture_node) {
+bool Recorder::isToBeRecorded(const std::string& topic, const bool is_capture_node) {
 
     /*
         We are already recoding that topic, so we don't want to record it twice.
     */
 
     if (m_persistors.find(topic) != m_persistors.end()) {
+        return false;
+    }
+
+    /*
+        Is the topic from the recorder itself?
+    */
+
+    if (topic.find(ROBO_TRACE_NODE_NAME) != std::string::npos) {
         return false;
     }
 

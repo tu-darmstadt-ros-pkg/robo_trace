@@ -4,27 +4,27 @@
 #include <ros/ros.h>
 // Project
 #include "robo_trace/storage/options.hpp"
-#include "robo_trace/processing/pipeline/constructor.hpp"
-#include "robo_trace/processing/stage/descriptor.hpp"
+#include "robo_trace/processing/constructor.hpp"
+#include "robo_trace/processing/descriptor.hpp"
 #include "robo_trace/modes/capture/options.hpp"
 #include "robo_trace/modes/capture/persistor.hpp"
 
 
-namespace robo_trace {
+namespace robo_trace::capture {
 
-class RoboTraceRecorder {
+class Recorder {
 
 public:
 
     /**
      *
      */
-    RoboTraceRecorder(ros::NodeHandle& system_node_handle);
+    Recorder(ros::NodeHandle& system_node_handle);
 
     /**
      *
      */
-    ~RoboTraceRecorder();
+    ~Recorder();
 
     /**
      * 
@@ -52,9 +52,9 @@ private:
 
     
     /** */
-    RecorderOptions::Ptr m_option_recorder;
+    robo_trace::capture::Options::Ptr m_option_recorder;
     /** */
-    ConnectionOptions::Ptr m_options_connection;
+    robo_trace::store::Options::Ptr m_options_connection;
 
     /** */
     ros::NodeHandle m_system_node_handle;
@@ -62,9 +62,9 @@ private:
     ros::Timer m_check_topics_timer;
 
     /** */
-    PipelineConstructor m_pipeline_constructor;
+    robo_trace::processing::Constructor m_pipeline_constructor;
     /** */
-    ProcessingStageDescriptor::Ptr m_storage_stage_descriptor;
+    robo_trace::processing::Descriptor::Ptr m_storage_stage_descriptor;
 
     /** */
     std::unordered_map<std::string, TopicPersistor::Ptr> m_persistors;

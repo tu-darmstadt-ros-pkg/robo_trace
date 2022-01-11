@@ -7,25 +7,25 @@
 #include <unordered_map>
 
 
-namespace robo_trace {
+namespace robo_trace::plugin::open_ssl {
 
 /**
  *
  */
-class OpenSSLPartialEncryptionConfiguration {
+class PartialEncryptionModuleConfiguration {
 
 public:
 
-    typedef std::shared_ptr<OpenSSLPartialEncryptionConfiguration> Ptr;
-    typedef std::shared_ptr<const OpenSSLPartialEncryptionConfiguration> ConstPtr;
+    typedef std::shared_ptr<PartialEncryptionModuleConfiguration> Ptr;
+    typedef std::shared_ptr<const PartialEncryptionModuleConfiguration> ConstPtr;
 
     struct EncryptionTarget {
 
-        typedef std::shared_ptr<OpenSSLPartialEncryptionConfiguration::EncryptionTarget> Ptr;
+        typedef std::shared_ptr<PartialEncryptionModuleConfiguration::EncryptionTarget> Ptr;
 
         EncryptionTarget() = default;
 
-        std::unordered_map<std::string, OpenSSLPartialEncryptionConfiguration::EncryptionTarget::Ptr> children;
+        std::unordered_map<std::string, PartialEncryptionModuleConfiguration::EncryptionTarget::Ptr> children;
         std::vector<std::string> targets;
     };
 
@@ -34,12 +34,12 @@ public:
     /**
      *
      */
-    OpenSSLPartialEncryptionConfiguration();
+    PartialEncryptionModuleConfiguration();
 
     /**
      *
      */
-    ~OpenSSLPartialEncryptionConfiguration();
+    ~PartialEncryptionModuleConfiguration();
     
     /**
      *
@@ -54,7 +54,7 @@ public:
     /**
      *
      */
-    std::unordered_map<std::string, OpenSSLPartialEncryptionConfiguration::EncryptionTarget::Ptr>& getEncryptionTargetsTree();
+    std::unordered_map<std::string, PartialEncryptionModuleConfiguration::EncryptionTarget::Ptr>& getEncryptionTargetsTree();
 
 private:
 
@@ -62,7 +62,7 @@ private:
     std::string m_encryption_method;
 
     // From message type to encryption targets
-    std::unordered_map<std::string, OpenSSLPartialEncryptionConfiguration::EncryptionTarget::Ptr> m_encryption_targets;
+    std::unordered_map<std::string, PartialEncryptionModuleConfiguration::EncryptionTarget::Ptr> m_encryption_targets;
 };
 
 }
