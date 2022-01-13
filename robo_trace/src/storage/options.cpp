@@ -29,7 +29,7 @@ void Options::load(const ros::NodeHandle& node_handle) {
 
     connection_namespace.getParam(ros::names::append("database", "name"), m_database_name); 
 
-    connection_namespace.getParam(ros::names::append("collections", "summary"), m_collection_name_summary);
+    connection_namespace.getParam(ros::names::append("collections", "meta"), m_collection_name_summary);
 
     connection_namespace.getParam(ros::names::append("options", "pool_size_min"), m_connection_pool_size_min);
     connection_namespace.getParam(ros::names::append("options", "pool_size_max"), m_connection_pool_size_max);
@@ -42,7 +42,7 @@ void Options::setup(po::options_description& description) {
 
     description.add_options()
         ("db_name", po::value<std::string>(), "The name of the database to store the recording in.")
-        ("db_summary_collection", po::value<std::string>(), "The name of the summary collection for the recording.")
+        ("db_meta_collection", po::value<std::string>(), "The name of the meta collection for the recording.")
         ("db_host_name", po::value<std::string>(), "The host name of the database server")
         ("db_host_port", po::value<int>(), "The port of the database server")
         ("db_timeout", po::value<float>(), "The timeout when communicating with the database server");
