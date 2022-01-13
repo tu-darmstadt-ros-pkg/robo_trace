@@ -13,11 +13,17 @@ robo_trace:
     topic_prefix: "/replay"
 
   connection:
-    database: "robo_trace"
-    port: 27017
-    host: "localhost"
-    timeout: 2.0
-    summary_collection: "__metadata__"
+    host:
+      port: 27017
+      name: "localhost"
+    database:
+      name: "robo_trace"
+    collections:
+      meta: "__metadata__"
+    options:
+      timeout: 2.0
+      pool_size_min: 4
+      pool_size_max: 8 
 
   # Pipeline configuration
   pipelines:
