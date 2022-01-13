@@ -11,6 +11,14 @@ Context::Context()
 
 Context::Context(const robo_trace::store::Container::Ptr& metadata)
 : m_metadata(metadata),
+  m_persistor({}),
+  m_terminated(false) {
+    //
+}
+
+Context::Context(const robo_trace::store::Container::Ptr& metadata, const robo_trace::store::Persistor::Ptr& persistor)
+: m_metadata(metadata),
+  m_persistor(persistor),
   m_terminated(false) {
     //
 }
@@ -29,15 +37,23 @@ void Context::setTerminated() {
     m_terminated = true;
 }
 
-bool Context::isUnserialized() const {
+bool Context::getHasPersistor() const {
+    return m_persistor.has_value();
+}
+
+const std::optional<robo_trace::store::Persistor::Ptr>& Context::getPersistor() const {
+    return m_persistor;
+}
+
+bool Context::getHasRosMessage() const {
     return m_unserialized_message.has_value();
 }
 
-const std::optional<ros_babel_fish::BabelFishMessage::ConstPtr>& Context::getUnserializedMessage() const {
+const std::optional<ros_babel_fish::BabelFishMessage::ConstPtr>& Context::getRosMessage() const {
     return m_unserialized_message;
 }
 
-const std::optional<const uint8_t*> Context::getUnserializedMessage(size_t& length) const {
+const std::optional<const uint8_t*> Context::getRosMessageStream(size_t& length) const {
     if (m_unserialized_message) {
 
         ros_babel_fish::BabelFishMessage::ConstPtr message = m_unserialized_message.value();
@@ -51,22 +67,22 @@ const std::optional<const uint8_t*> Context::getUnserializedMessage(size_t& leng
     }
 }
 
-void Context::setUnserializedMessage(const ros_babel_fish::BabelFishMessage::ConstPtr& ingress) {
+void Context::setRosMessage(const ros_babel_fish::BabelFishMessage::ConstPtr& ingress) {
     m_unserialized_message = ingress;
 }
 
-bool Context::isSerialized() const {
-    return m_serialized_message.has_value();
+bool Context::getHasBsonMessage() const {
+    return m_bson_message.has_value();
 }
 
-const std::optional<bsoncxx::document::view>& Context::getSerializedMessage() const {
-    return m_serialized_message;
+const std::optional<bsoncxx::document::view>& Context::getBsonMessage() const {
+    return m_bson_message;
 }
 
-const std::optional<const uint8_t* const> Context::getSerializedMessage(size_t& length) const {
-    if (m_serialized_message) {
+const std::optional<const uint8_t* const> Context::getBsonMessageStream(size_t& length) const {
+    if (m_bson_message) {
 
-        const bsoncxx::document::view& metadata = m_serialized_message.value();
+        const bsoncxx::document::view& metadata = m_bson_message.value();
         length = metadata.length();
 
         return metadata.data();
@@ -77,14 +93,14 @@ const std::optional<const uint8_t* const> Context::getSerializedMessage(size_t& 
     }
 }
 
-void Context::setSerializedMessage(const bsoncxx::document::value& serialized) {
-    m_serialized_owning = serialized;
-    m_serialized_message = m_serialized_owning.value().view();
+void Context::setBsonMessage(const bsoncxx::document::value& serialized) {
+    m_bson_owning = serialized;
+    m_bson_message = m_bson_owning.value().view();
 }
 
-void Context::setSerializedMessage(const bsoncxx::document::view serialized) {
-    m_serialized_owning = {};
-    m_serialized_message = serialized;
+void Context::setBsonMessage(const bsoncxx::document::view serialized) {
+    m_bson_owning = {};
+    m_bson_message = serialized;
 }
 
 }

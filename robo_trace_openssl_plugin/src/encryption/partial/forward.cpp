@@ -152,7 +152,7 @@ void PartialEncryptionForwardProcessor::process(const robo_trace::processing::Co
     context->getMetadata()->append("iv", &m_iv[0], m_iv.size());
 
     size_t message_stream_length = 0;
-    const std::optional<const uint8_t* const> o_message_stream = context->getUnserializedMessage(message_stream_length);
+    const std::optional<const uint8_t* const> o_message_stream = context->getRosMessageStream(message_stream_length);
 
     if (!o_message_stream) {
         throw std::runtime_error("Unserialized message not present.");
@@ -170,7 +170,7 @@ void PartialEncryptionForwardProcessor::process(const robo_trace::processing::Co
     serialize<true>(m_msg_template, builder, &message_stream, m_encryption_tree);
 #endif
 
-    context->setSerializedMessage(builder.extract());
+    context->setBsonMessage(builder.extract());
    
 }
 

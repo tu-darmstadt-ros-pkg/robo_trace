@@ -1,8 +1,19 @@
 #pragma once
 
-namespace robo_trace::processing::sink {
+// Std
+#include <memory>
+// MongoCXX
+#include <bsoncxx/document/value.hpp>
+
+namespace robo_trace::store {
 
 class Persistor {
+
+public:
+
+    typedef std::shared_ptr<Persistor> Ptr;
+
+    typedef std::shared_ptr<const Persistor> ConstPtr;
 
 public:
 
@@ -19,7 +30,7 @@ public:
     /**
      *
      */
-    virtual void store(const bsoncxx::document::view& element) = 0;
+    virtual void store(const bsoncxx::document::value& element) = 0;
 
 };
 

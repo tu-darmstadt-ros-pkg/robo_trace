@@ -90,7 +90,7 @@ void TopicPersistor::process(const ros::MessageEvent<const ros_babel_fish::Babel
     const ros_babel_fish::BabelFishMessage::ConstPtr msg = event.getConstMessage(); 
 
     robo_trace::processing::Context::Ptr context = std::make_shared<robo_trace::processing::Context>(metadata_container);
-    context->setUnserializedMessage(msg);
+    context->setRosMessage(msg);
     
     for (const robo_trace::processing::Processor::Ptr& processing_stage : m_pipeline) {
         

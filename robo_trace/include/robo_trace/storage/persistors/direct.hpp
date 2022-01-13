@@ -8,19 +8,19 @@
 
 namespace robo_trace::store {
 
-class BasicPersistor final : public Persistor {
+class DirectPersistor final : public Persistor {
 
 public:
 
     /**
      *
      */
-    BasicPersistor(const std::string database, const std::string collection);
+    DirectPersistor(const std::string database, const std::string collection);
 
     /**
      *
      */
-    ~BasicPersistor();
+    ~DirectPersistor();
     
     /**
      *

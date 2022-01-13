@@ -137,7 +137,7 @@ void PartialEncryptionBackwardProcessor::process(const robo_trace::processing::C
         Deserialize the message.
     */   
 
-    const std::optional<bsoncxx::document::view>& o_serialized = context->getSerializedMessage();
+    const std::optional<bsoncxx::document::view>& o_serialized = context->getBsonMessage();
 
     if (!o_serialized) {
         throw std::runtime_error("Serialized message not present.");
@@ -154,7 +154,7 @@ void PartialEncryptionBackwardProcessor::process(const robo_trace::processing::C
     stream_message->allocate(deserialized->_sizeInBytes());
     deserialized->writeToStream(stream_message->buffer());
     
-    context->setUnserializedMessage(stream_message);
+    context->setRosMessage(stream_message);
    
 }
 

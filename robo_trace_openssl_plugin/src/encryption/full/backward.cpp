@@ -87,7 +87,7 @@ robo_trace::processing::Mode FullEncryptionBackwardProcessor::getMode() const {
 
 void FullEncryptionBackwardProcessor::process(const robo_trace::processing::Context::Ptr& context) {
     
-    const std::optional<bsoncxx::document::view>& o_serialized = context->getSerializedMessage();
+    const std::optional<bsoncxx::document::view>& o_serialized = context->getBsonMessage();
 
     if (!o_serialized) {
         throw std::runtime_error("Serialized message not present.");
@@ -132,7 +132,7 @@ void FullEncryptionBackwardProcessor::process(const robo_trace::processing::Cont
     // assert(encrypted_legth <= plain_text_length + length, "Plain text may not be longer than cipher text.");
     // As we'll allocate less memory than with the first allocate invocation, the buffer is not reallocated.
     message_wrapper->allocate(plain_text_length + length);
-    context->setUnserializedMessage(message_wrapper);
+    context->setRosMessage(message_wrapper);
 
 }
 

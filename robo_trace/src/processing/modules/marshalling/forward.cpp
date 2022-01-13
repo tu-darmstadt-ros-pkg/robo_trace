@@ -27,7 +27,7 @@ Mode BasicMarshallingForwardProcessor::getMode() const {
 
 void BasicMarshallingForwardProcessor::process(const Context::Ptr& context) {
     
-    const std::optional<ros_babel_fish::BabelFishMessage::ConstPtr>& o_message = context->getUnserializedMessage();
+    const std::optional<ros_babel_fish::BabelFishMessage::ConstPtr>& o_message = context->getRosMessage();
 
     if (!o_message) {
         throw std::runtime_error("No message to be serialized provided.");
@@ -49,7 +49,7 @@ void BasicMarshallingForwardProcessor::process(const Context::Ptr& context) {
        
     }*/
     
-    context->setSerializedMessage(builder.extract());
+    context->setBsonMessage(builder.extract());
 }
 
 void BasicMarshallingForwardProcessor::serialize(const ros_babel_fish::MessageTemplate::ConstPtr& msg_template, bsoncxx::builder::basic::sub_document& builder, const uint8_t* stream, size_t& bytes_read) {

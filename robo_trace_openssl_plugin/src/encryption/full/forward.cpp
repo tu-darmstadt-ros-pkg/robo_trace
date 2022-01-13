@@ -103,7 +103,7 @@ void FullEncryptionForwardProcessor::process(const robo_trace::processing::Conte
     }
 
     size_t message_stream_length = 0;
-    const std::optional<const uint8_t* const> o_message_stream = context->getUnserializedMessage(message_stream_length);
+    const std::optional<const uint8_t* const> o_message_stream = context->getRosMessageStream(message_stream_length);
 
     if (!o_message_stream) {
         throw std::runtime_error("Unserialized message not present.");
@@ -136,7 +136,7 @@ void FullEncryptionForwardProcessor::process(const robo_trace::processing::Conte
     bsoncxx::builder::basic::document builder{};
     builder.append(bsoncxx::builder::basic::kvp("encrypted", wrapper));
     
-    context->setSerializedMessage(builder.extract());
+    context->setBsonMessage(builder.extract());
 
    // mongo::BSONObjBuilder builder;
    // builder.appendBinData("encrypted", cipher_text_length + length, mongo::BinDataType::BinDataGeneral, &m_cipher_buffer[0]);

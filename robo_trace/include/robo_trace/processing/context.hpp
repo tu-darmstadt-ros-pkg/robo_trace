@@ -10,6 +10,7 @@
 #include <ros_babel_fish/babel_fish_message.h>
 // Project
 #include "robo_trace/storage/container.hpp"
+#include "robo_trace/storage/persistor.hpp"
 
 
 namespace robo_trace::processing {
@@ -36,13 +37,13 @@ public:
     /**
      *
      */
-    ~Context();
+    Context(const robo_trace::store::Container::Ptr& metadata, const robo_trace::store::Persistor::Ptr& persistor);
 
     /**
      *
      */
-    const robo_trace::store::Container::Ptr& getMetadata() const;
-    
+    ~Context();
+
     /**
      *
      */
@@ -56,42 +57,59 @@ public:
     /**
      *
      */
-    bool isUnserialized() const;
+    const robo_trace::store::Container::Ptr& getMetadata() const;
+
+    /**
+     * @brief 
+     *
+     * 
+     */
+    bool getHasPersistor() const;
 
     /**
      * 
      */
-    const std::optional<ros_babel_fish::BabelFishMessage::ConstPtr>& getUnserializedMessage() const;
-
-    /**
-     * 
-     */
-    const std::optional<const uint8_t*> getUnserializedMessage(size_t& length) const;
+    const std::optional<robo_trace::store::Persistor::Ptr>& getPersistor() const;
 
     /**
      *
      */
-    void setUnserializedMessage(const ros_babel_fish::BabelFishMessage::ConstPtr& ingress);
+    bool getHasRosMessage() const;
+
+    /**
+     * 
+     */
+    const std::optional<ros_babel_fish::BabelFishMessage::ConstPtr>& getRosMessage() const;
+
+    /**
+     * 
+     */
+    const std::optional<const uint8_t*> getRosMessageStream(size_t& length) const;
 
     /**
      *
      */
-    bool isSerialized() const;
+    void setRosMessage(const ros_babel_fish::BabelFishMessage::ConstPtr& ingress);
+
+    /**
+     *
+     */
+    bool getHasBsonMessage() const;
 
     /**
      * 
      */
-    const std::optional<bsoncxx::document::view>& getSerializedMessage() const;
+    const std::optional<bsoncxx::document::view>& getBsonMessage() const;
 
     /**
      * 
      */
-    const std::optional<const uint8_t* const> getSerializedMessage(size_t& length) const;
+    const std::optional<const uint8_t* const> getBsonMessageStream(size_t& length) const;
 
     /**
      * 
      */
-    void setSerializedMessage(const bsoncxx::document::value& serialized);
+    void setBsonMessage(const bsoncxx::document::value& serialized);
 
     /**
      * Sets the serialized message for this context. Note that with this
@@ -100,20 +118,22 @@ public:
      * 
      * @param serialized the serialized message
      */
-    void setSerializedMessage(const bsoncxx::document::view serialized);
+    void setBsonMessage(const bsoncxx::document::view serialized);
 
 protected:
 
     /** */
     const robo_trace::store::Container::Ptr m_metadata;
+    /** */
+    const std::optional<robo_trace::store::Persistor::Ptr> m_persistor;
 
     /** */
     bool m_terminated;
     
     /** */
-    std::optional<bsoncxx::document::view> m_serialized_message;
+    std::optional<bsoncxx::document::view> m_bson_message;
     /** */
-    std::optional<bsoncxx::document::value> m_serialized_owning;
+    std::optional<bsoncxx::document::value> m_bson_owning;
 
     /**  */
     std::optional<ros_babel_fish::BabelFishMessage::ConstPtr> m_unserialized_message;

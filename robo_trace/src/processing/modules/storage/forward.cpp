@@ -102,12 +102,13 @@ void StorageForwardProcessor::process(const Context::Ptr& context) {
         Serialize the message.
     */
     
-    if (!context->isSerialized()) {
+    const std::optional<bsoncxx::document::view>& serialized_message_o = context->getBsonMessage();
+
+    if (!serialized_message_o) {
         throw std::runtime_error("Failed persisting message! Writeback stage reached, but not yet serialized.");
     }
 
-    const bsoncxx::document::view serialized_message = context->getSerializedMessage().value();
-    builder.append(bsoncxx::builder::basic::kvp("message", serialized_message));
+    builder.append(bsoncxx::builder::basic::kvp("message", serialized_message_o.value()));
 
     /*
         Push the message to MongoDB.

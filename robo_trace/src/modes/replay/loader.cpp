@@ -305,7 +305,7 @@ void MessageLoader::digest(const bsoncxx::document::view& serialized_message) {
     const bsoncxx::document::view message_serialized = serialized_message["message"].get_document().view();
     
     const robo_trace::processing::Context::Ptr context = std::make_shared<robo_trace::processing::Context>(metadata_container);
-    context->setSerializedMessage(message_serialized);
+    context->setBsonMessage(message_serialized);
 
     /*
         Process  the message.
@@ -319,7 +319,7 @@ void MessageLoader::digest(const bsoncxx::document::view& serialized_message) {
         Push messages to sink.
     */
 
-    const std::optional<ros_babel_fish::BabelFishMessage::ConstPtr>& o_message_deserialized = context->getUnserializedMessage();
+    const std::optional<ros_babel_fish::BabelFishMessage::ConstPtr>& o_message_deserialized = context->getRosMessage();
 
     if (!o_message_deserialized) {
         throw std::runtime_error("Message has reached final stage, but is not deserialized yet.");

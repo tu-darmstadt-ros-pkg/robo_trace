@@ -32,7 +32,7 @@ void BasicMarshallingBackwardProcessor::process(const Context::Ptr& context) {
 
     */
 
-    const std::optional<bsoncxx::document::view>& o_serialized = context->getSerializedMessage();
+    const std::optional<bsoncxx::document::view>& o_serialized = context->getBsonMessage();
 
     if (!o_serialized) {
         throw std::runtime_error("Message to be deserialized not found.");
@@ -49,7 +49,7 @@ void BasicMarshallingBackwardProcessor::process(const Context::Ptr& context) {
     stream_message->allocate(deserialized->_sizeInBytes());
     deserialized->writeToStream(stream_message->buffer());
  
-    context->setUnserializedMessage(stream_message);
+    context->setRosMessage(stream_message);
 }
 
 void BasicMarshallingBackwardProcessor::deserialize(const ros_babel_fish::MessageTemplate::ConstPtr& msg_template, const bsoncxx::document::view& serialized, ros_babel_fish::CompoundMessage& deserialized) {
