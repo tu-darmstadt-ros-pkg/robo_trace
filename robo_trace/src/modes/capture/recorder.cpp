@@ -9,7 +9,9 @@
 // Project
 #include "robo_trace/storage/connector.hpp"
 #include "robo_trace/storage/container.hpp"
-#include "robo_trace/processing/modules/storage/descriptor.hpp"
+#include "robo_trace/storage/persistors/direct.hpp"
+#include "robo_trace/storage/persistors/batch.hpp"
+#include "robo_trace/processing/modules/storage/forward.hpp"
 
 
 namespace robo_trace::capture {
@@ -35,15 +37,29 @@ void Recorder::initialize(int argc, char** argv) {
     m_options_connection = std::make_shared<robo_trace::store::Options>();
 
     robo_trace::util::Options::load({m_option_recorder, m_options_connection}, m_system_node_handle, argc, argv);
+    
+    /*
+        Initialize the persistor spinner.
+    */
+
+    m_persistor_callback_queue = std::make_unique<ros::CallbackQueue>();
+    
+    m_persistor_spinner = std::make_unique<ros::AsyncSpinner>(1, m_persistor_callback_queue.get());
+    m_persistor_spinner->start();
 
     /*
-        Initialize the storage stage.
+        Initialize the MongoDB connector.
     */
-    
-    robo_trace::store::Connector::instance().configure(m_options_connection);
-    
-    m_storage_stage_descriptor = std::make_shared<robo_trace::processing::StorageModuleDescriptor>(m_options_connection, m_system_node_handle);
 
+    robo_trace::store::Connector::instance().configure(m_options_connection);
+  
+    /*
+        Initialize the persistor for to the metadata collection.
+    */
+
+    m_persistor_metadata = std::make_shared<robo_trace::store::DirectPersistor>(m_options_connection->m_database_name, m_options_connection->m_collection_name_summary);
+
+    
     /*
         Initialize the pipeline constructor.
     */
@@ -166,22 +182,67 @@ void Recorder::record(const ros::master::TopicInfo& topic_info) {
     */
     
     std::vector<robo_trace::processing::Processor::Ptr> pipeline_stages = m_pipeline_constructor.construct(robo_trace::processing::Mode::CAPTURE, topic_recording_summary, topic);
-     
-    // The storage stage is added manually.
-    const robo_trace::processing::Processor::Ptr storage_stage = m_storage_stage_descriptor->getStage(topic_recording_summary, robo_trace::processing::Mode::CAPTURE).value();
-    pipeline_stages.push_back(storage_stage);
     
+    /*
+        Construct and add the persistor module to the pipeline. 
+    */
+
+    robo_trace::store::Persistor::Ptr writeback_persistor = std::make_shared<robo_trace::store::BatchPersistor>(
+        // database
+        m_options_connection->m_database_name, 
+        // collection
+        topic,
+        // callback_queue
+        m_persistor_callback_queue.get()
+    );
+    writeback_persistor->setIndex("metadata.time", PERSISTOR_TREAT_TIME_AS_UNIQUE);
+
+    // The storage stage is added manually.
+    const robo_trace::processing::Processor::Ptr storage_stage = std::make_shared<robo_trace::processing::StorageForwardProcessor>(
+                // persistor
+                writeback_persistor,
+                // metadata
+                topic_recording_summary
+            );
+    pipeline_stages.push_back(storage_stage);
+
+    /*
+
+    */
+
     // The persistor will handle subscription and pipeline invocation.
-    TopicPersistor::Ptr persistor = std::make_shared<TopicPersistor>(m_option_recorder, pipeline_stages, m_system_node_handle, topic);
+    TopicPersistor::Ptr topic_persistor = std::make_shared<TopicPersistor>(
+        // options_recorder
+        m_option_recorder,
+        // pipeline
+        pipeline_stages,
+        // persistor
+        writeback_persistor,
+        // node_handle 
+        m_system_node_handle, 
+        // topic
+        topic
+    );
 
     // std::make_pair<std::string, TopicPersistor::Ptr>(std::move(topic), persistor)
-    m_persistors.insert({{topic, persistor}});
+    m_persistors.insert({{topic, topic_persistor}});
 
     /*
         Kick of recording.
     */
 
-    persistor->start();    
+    topic_persistor->start();    
+
+    /*
+        Store the metadata for this topic
+    */
+    
+    bsoncxx::builder::basic::document topic_summary_mongo_builder{};
+    topic_recording_summary->serialize(topic_summary_mongo_builder);
+
+    bsoncxx::document::value topic_summary_mongo_entry = topic_summary_mongo_builder.extract();
+    m_persistor_metadata->store(topic_summary_mongo_entry);
+    
     
 }
 

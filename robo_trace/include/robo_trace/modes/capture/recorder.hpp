@@ -2,8 +2,10 @@
 
 // ROS
 #include <ros/ros.h>
+#include <ros/callback_queue.h>
 // Project
 #include "robo_trace/storage/options.hpp"
+#include "robo_trace/storage/persistor.hpp"
 #include "robo_trace/processing/constructor.hpp"
 #include "robo_trace/processing/descriptor.hpp"
 #include "robo_trace/modes/capture/options.hpp"
@@ -62,9 +64,14 @@ private:
     ros::Timer m_check_topics_timer;
 
     /** */
+    std::unique_ptr<ros::CallbackQueue> m_persistor_callback_queue;
+    /** */
+    std::unique_ptr<ros::AsyncSpinner> m_persistor_spinner;
+
+    /** */
     robo_trace::processing::Constructor m_pipeline_constructor;
     /** */
-    robo_trace::processing::Descriptor::Ptr m_storage_stage_descriptor;
+    robo_trace::store::Persistor::Ptr m_persistor_metadata;
 
     /** */
     std::unordered_map<std::string, TopicPersistor::Ptr> m_persistors;

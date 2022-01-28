@@ -9,6 +9,7 @@
 #include <ros_babel_fish/babel_fish.h>
 // Project
 #include "robo_trace/parameters.hpp"
+#include "robo_trace/storage/persistor.hpp"
 #include "robo_trace/processing/processor.hpp"
 #include "robo_trace/modes/capture/options.hpp"
 
@@ -27,7 +28,7 @@ public:
     /**
      * 
      */
-    TopicPersistor(const Options::ConstPtr options_recorder, const std::vector<robo_trace::processing::Processor::Ptr>& pipeline, ros::NodeHandle& node_handle, const std::string& topic);
+    TopicPersistor(const Options::ConstPtr options_recorder, const std::vector<robo_trace::processing::Processor::Ptr>& pipeline, const robo_trace::store::Persistor::Ptr persistor, ros::NodeHandle& node_handle, const std::string& topic);
 
 
     /**
@@ -79,7 +80,9 @@ private:
     ros::NodeHandle& m_node_handle;
     /** */
     const std::vector<robo_trace::processing::Processor::Ptr> m_pipeline;
-    
+    /** */
+    const robo_trace::store::Persistor::Ptr m_persistor;
+
     /** */
     uint32_t m_messages_received_local = 0;
     /** */

@@ -2,6 +2,7 @@
 // Std
 #include <string>
 // MongoCXX
+#include <mongocxx/options/insert.hpp>
 // Project
 #include "robo_trace/storage/persistor.hpp"
 
@@ -15,7 +16,7 @@ public:
     /**
      *
      */
-    DirectPersistor(const std::string database, const std::string collection);
+    DirectPersistor(const std::string& database, const std::string& collection);
 
     /**
      *
@@ -25,14 +26,12 @@ public:
     /**
      *
      */
-    virtual void store(const bsoncxx::document::view& element) final override;
+    virtual void store(bsoncxx::document::value& element) final override;
 
 private:
 
     /** */
-    const std::string m_database;
-    /** */
-    const std::string m_collection;
+    mongocxx::options::insert m_insert_option;
 
 };
 

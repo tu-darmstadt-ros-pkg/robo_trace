@@ -20,7 +20,7 @@ public:
     /**
      *
      */
-    Persistor();
+    Persistor(const std::string& database, const std::string& collection);
 
     /**
      *
@@ -28,9 +28,44 @@ public:
     virtual ~Persistor();
 
     /**
+     * Returns the name of the database this persistor is
+     * peristing to.
+     * 
+     * @return the name of the database elements are store to.
+     */
+    const std::string& getDatabase();
+
+    /**
+     * Returns the name of the collection this persisor is
+     * persisting to.
+     * 
+     * @return the name of the collection elements are stored to.
+     */
+    const std::string& getCollection();
+
+    /**
      *
      */
-    virtual void store(const bsoncxx::document::value& element) = 0;
+    void setIndex(const std::string& field, const bool unique);
+
+    /**
+     *
+     */
+    virtual void store(bsoncxx::document::value& element) = 0;
+
+protected:
+
+    /**
+     * 
+     */
+    void setup();
+
+protected:
+
+    /** */
+    const std::string m_database;
+    /** */
+    const std::string m_collection;
 
 };
 

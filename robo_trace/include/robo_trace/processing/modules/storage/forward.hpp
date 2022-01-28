@@ -6,6 +6,7 @@
 // Project
 #include "robo_trace/storage/container.hpp"
 #include "robo_trace/storage/connector.hpp"
+#include "robo_trace/storage/persistor.hpp"
 #include "robo_trace/processing/processor.hpp"
 
 
@@ -18,7 +19,7 @@ public:
     /**
      * 
      */
-    StorageForwardProcessor(const robo_trace::store::Container::Ptr& metadata, const std::string& database, const std::string& collection_name_data, const std::string& collection_name_meta);
+    StorageForwardProcessor(const robo_trace::store::Persistor::Ptr& persistor, const robo_trace::store::Container::Ptr& metadata);
   
     /**
      * 
@@ -38,9 +39,7 @@ public:
 private:
 
     /** */
-    const std::string m_database_name;
-    /** */
-    const std::string m_collection_name_data;
+    const robo_trace::store::Persistor::Ptr m_persistor;
 
 };
 

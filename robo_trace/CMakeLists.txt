@@ -103,6 +103,13 @@ set(
     src/storage/container.cpp
     include/${PROJECT_NAME}/storage/connector.hpp
     src/storage/connector.cpp
+    include/${PROJECT_NAME}/storage/persistor.hpp
+    src/storage/persistor.cpp
+    include/${PROJECT_NAME}/storage/persistors/direct.hpp
+    src/storage/persistors/direct.cpp
+    include/${PROJECT_NAME}/storage/persistors/batch.hpp
+    src/storage/persistors/batch.cpp
+
 #[[
     include/${PROJECT_NAME}/storage/query.hpp
     src/storage/query.cpp
@@ -145,8 +152,6 @@ set(
 
     include/${PROJECT_NAME}/processing/modules/storage/forward.hpp
     src/processing/modules/storage/forward.cpp
-    include/${PROJECT_NAME}/processing/modules/storage/descriptor.hpp
-    src/processing/modules/storage/descriptor.cpp
 
  #[[
     include/${PROJECT_NAME}/processing/stage/blob/forward.hpp
