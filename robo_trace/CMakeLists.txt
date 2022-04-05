@@ -2,12 +2,15 @@ cmake_minimum_required(VERSION 3.0.2)
 project(robo_trace)
 
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_C_FLAGS "-Wall -Wno-unused-result -Wno-unknown-pragmas -Wno-unused-variable -Wfatal-errors -fPIC ${CMAKE_C_FLAGS}")
+set(CMAKE_C_FLAGS 
+" -Wall 
+  -Wfatal-errors 
+  -fPIC 
+  -O3
+  ${CMAKE_C_FLAGS}
+")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-#list(APPEND 
-#  CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/"
-#)
 
 find_package(catkin 
   REQUIRED COMPONENTS
@@ -26,18 +29,9 @@ find_package(Boost
     regex
 )
 
-#find_package(MongoDB REQUIRED)
 find_package(bsoncxx REQUIRED)
 find_package(mongocxx REQUIRED)
 
-if (CMAKE_COMPILER_IS_GNUCC)
-  add_compile_options(-O1)
-endif()
-
-#include(CheckIncludeFileCXX)
-#check_include_file_cxx("mongo/version.h" HAVE_MONGO_VERSION_H)
-
-#file(MAKE_DIRECTORY "${CATKIN_DEVEL_PREFIX}/include")
 
 ###################################
 ## catkin specific configuration ##
@@ -59,7 +53,6 @@ catkin_package(
     robo_trace_msgs
   DEPENDS
      ${LIBMONGOCXX_EXPORT}
-#    ${MONGO_EXPORT}
 )
 
 
@@ -67,21 +60,12 @@ catkin_package(
 ## Build ##
 ###########
 
-#if (NOT MongoDB_EXPOSE_MACROS)
-#  add_definitions(-DMONGO_EXPOSE_MACROS)
-#endif()
-
-#configure_file(
-#  "include/${PROJECT_NAME}/config.h.in" 
-#  "${CATKIN_DEVEL_PREFIX}/include/${PROJECT_NAME}/config.h"
-#)
 
 include_directories(
   ${CATKIN_DEVEL_PREFIX}/include
   include
   ${catkin_INCLUDE_DIRS}
   ${Boost_INCLUDE_DIRS}
-#  ${MongoDB_INCLUDE_DIR}
   ${LIBMONGOCXX_INCLUDE_DIRS}
 )
 
@@ -103,6 +87,8 @@ set(
     src/storage/container.cpp
     include/${PROJECT_NAME}/storage/connector.hpp
     src/storage/connector.cpp
+    include/${PROJECT_NAME}/storage/stream.hpp
+    src/storage/stream.cpp
     include/${PROJECT_NAME}/storage/persistor.hpp
     src/storage/persistor.cpp
     include/${PROJECT_NAME}/storage/persistors/direct.hpp
@@ -130,6 +116,9 @@ set(
     src/processing/variant.cpp
     include/${PROJECT_NAME}/processing/constructor.hpp
     src/processing/constructor.cpp
+
+    include/${PROJECT_NAME}/processing/translation/translator.hpp
+    src/processing/translation/translator.cpp
 
     include/${PROJECT_NAME}/processing/modules/measurement/delegate.hpp
     src/processing/modules/measurement/delegate.cpp
@@ -211,8 +200,6 @@ target_link_libraries(
     ${catkin_LIBRARIES}
     ${Boost_LIBRARIES}
     mongo::mongocxx_shared
-    #${MongoDB_LIBRARIES}
-    # ${LIBMONGOCXX_LIBRARIES}
 )
 
 
@@ -262,7 +249,7 @@ install(
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
-#[[
+
 install(
   TARGETS 
     record
@@ -270,7 +257,7 @@ install(
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-)]]
+)
 
 install(
   FILES 

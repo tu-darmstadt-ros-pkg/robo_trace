@@ -3,6 +3,11 @@
 
 #define ROBO_TRACE_NODE_NAME "robo_trace"
 
+// How many threads to use for processing the ros callback queue.
+#define THREAD_COUNT_ROS 8
+// How many threads to use for processing the I/O callback queue.
+#define THRAD_COUNT_IO 8
+
 // If enabled, time will be upgraded from a plein index to a unique index
 #define PERSISTOR_TREAT_TIME_AS_UNIQUE 1
 // If enabled, documentation by MongoDB will explicitly be disabled.
@@ -12,14 +17,26 @@
 // The default batch size for the batch mode persistor.
 #define PERSISTOR_DEFAULT_BATCH_SIZE 32
 // If enabled, the application will terminate if a data collection is already present.
-#define PERSISTOR_FAIL_IF_DATA_COLLECTION_PRESENT
+// #define PERSISTOR_FAIL_IF_DATA_COLLECTION_PRESENT
+// If enabled, each persistor will persit to a distinct bucket for its bulk data.
+#define PERSISTOR_USE_UNIQUE_BUCKET
+// The name of the global bucket.  
+#define PERSISTOR_GLOBAL_BUCKET_NAME "blobs"
+
+// Weather to capture processing ingress and egress times.
+// Note: The egress time is to be understood as the handover time to the persistor.
+#define EVALUATION_CAPTURE_COURSE_TIMINIGS
+// 
+// #define EVALUATION_CAPTURE_WRITEBACK_TIME
+// Weather to capture the time needed by any stage in the processing pipeline for each message.
+// #define EVALUATION_CAPTURE_PIPELINE_TIMINGS
 
 // 
 #define RECORDING_SIGNAL_PIPELINE_PASS 
 // 
 #define RECORDING_SIGNAL_PIPELINE_PASS_TOPIC_PREFIX "signal_stored"
 // 
-#define RECORDING_SIGNAL_PIPELINE_PASS_TOPIC_QUEUE_SIZE 1
+#define RECORDING_SIGNAL_PIPELINE_PASS_TOPIC_QUEUE_SIZE 100
 
 // ########### ROS Logging related definitions ###########
 

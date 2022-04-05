@@ -50,8 +50,7 @@ FullEncryptionForwardProcessor::FullEncryptionForwardProcessor(const FullEncrypt
     }
     
     std::string s(m_key.begin(), m_key.end());
-    ROS_INFO_STREAM("MKey is: " << key_length << " with " << s);
-
+ 
     /*
         Save the encrypted key to the container.
     */
@@ -123,7 +122,7 @@ void FullEncryptionForwardProcessor::process(const robo_trace::processing::Conte
     }
 
     int length = 0;
-    // Usually does not add anything to the cipher text, but might i.e. for padding.
+    // Account for possible padding.
     if(!EVP_EncryptFinal_ex(m_encryption_context, &m_cipher_buffer[0] + cipher_text_length, &length)) {
         throw std::runtime_error("Failed finalizing encryption.");
     }
@@ -137,11 +136,7 @@ void FullEncryptionForwardProcessor::process(const robo_trace::processing::Conte
     builder.append(bsoncxx::builder::basic::kvp("encrypted", wrapper));
     
     context->setBsonMessage(builder.extract());
-
-   // mongo::BSONObjBuilder builder;
-   // builder.appendBinData("encrypted", cipher_text_length + length, mongo::BinDataType::BinDataGeneral, &m_cipher_buffer[0]);
-   // context->setSerializedMessage(builder.obj());
-    
+ 
 }
 
 

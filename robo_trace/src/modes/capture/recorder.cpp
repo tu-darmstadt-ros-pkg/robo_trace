@@ -1,5 +1,7 @@
 // Base
 #include "robo_trace/modes/capture/recorder.hpp"  
+// Std
+#include <algorithm>
 // Boost
 #include <boost/regex.hpp>
 // Ros
@@ -44,7 +46,7 @@ void Recorder::initialize(int argc, char** argv) {
 
     m_persistor_callback_queue = std::make_unique<ros::CallbackQueue>();
     
-    m_persistor_spinner = std::make_unique<ros::AsyncSpinner>(1, m_persistor_callback_queue.get());
+    m_persistor_spinner = std::make_unique<ros::AsyncSpinner>(THRAD_COUNT_IO, m_persistor_callback_queue.get());
     m_persistor_spinner->start();
 
     /*
@@ -59,7 +61,14 @@ void Recorder::initialize(int argc, char** argv) {
 
     m_persistor_metadata = std::make_shared<robo_trace::store::DirectPersistor>(m_options_connection->m_database_name, m_options_connection->m_collection_name_summary);
 
-    
+#ifdef PERSISTOR_USE_UNIQUE_BUCKET
+    /*
+
+    */
+
+    m_stream_handler = std::make_shared<robo_trace::store::StreamHandler>(m_options_connection->m_database_name, PERSISTOR_GLOBAL_BUCKET_NAME);
+#endif
+
     /*
         Initialize the pipeline constructor.
     */
@@ -72,6 +81,59 @@ void Recorder::initialize(int argc, char** argv) {
 
     m_check_topics_timer = m_system_node_handle.createTimer(ros::Duration(m_option_recorder->m_capture_topic_check_period), &Recorder::onCheckForNewTopics, this);
    
+}
+
+void Recorder::terminate(int signal) {
+    (void) signal;
+    
+    ROS_INFO_STREAM("Terminating recorder.");
+
+    /*
+        Stop all current recording related acticity.
+    */
+
+    m_check_topics_timer.stop();
+
+    for (const auto& [topic, persistor] : m_persistors) {
+        persistor->stop();
+    }
+
+    /*
+        Flush the message persitors.
+    */
+
+    ROS_INFO_STREAM("Uploading pending messages.");
+
+    for (const auto& [topic, persistor] : m_persistors) {
+        persistor->flush();
+    }
+
+    /*
+        Wait for the job queue to be fully processed.
+    */
+
+    ros::Rate check_rate(0.5);
+
+    while(!m_persistor_callback_queue->empty()) {
+        ROS_INFO_STREAM(" - Working.");
+        check_rate.sleep();
+    }
+
+    /*
+        Shutdown remaining components.
+    */
+  
+    m_persistor_spinner->stop();
+    m_persistors.clear();
+
+    ROS_INFO_STREAM("Bye.");
+
+    /*
+        Delegate to ROS.
+    */
+
+    ros::requestShutdown();
+
 }
 
 
@@ -187,13 +249,22 @@ void Recorder::record(const ros::master::TopicInfo& topic_info) {
         Construct and add the persistor module to the pipeline. 
     */
 
+    std::string message_type_adjusted = message_type;
+    std::replace(message_type_adjusted.begin(), message_type_adjusted.end(), '/', '_');
+
+    int buffer_size = 0;
+    ros::param::param<int>("/robo_trace/capture/upload/buffering/" + message_type_adjusted, buffer_size, 32);
+    ROS_INFO_STREAM(" Buffer size is " << std::to_string(buffer_size) << " (Topic: " << topic << ")");
+
     robo_trace::store::Persistor::Ptr writeback_persistor = std::make_shared<robo_trace::store::BatchPersistor>(
         // database
         m_options_connection->m_database_name, 
         // collection
         topic,
         // callback_queue
-        m_persistor_callback_queue.get()
+        m_persistor_callback_queue.get(),
+        // buffer_size
+        buffer_size
     );
     writeback_persistor->setIndex("metadata.time", PERSISTOR_TREAT_TIME_AS_UNIQUE);
 
@@ -207,24 +278,41 @@ void Recorder::record(const ros::master::TopicInfo& topic_info) {
     pipeline_stages.push_back(storage_stage);
 
     /*
+        Construct the stream handler.
+    */
+#ifdef PERSISTOR_USE_UNIQUE_BUCKET
+    const robo_trace::store::StreamHandler::Ptr& stream_handler = m_stream_handler; 
+#else
+
+   const robo_trace::store::StreamHandler::Ptr = std::make_shared<robo_trace::store::StreamHandler>(
+       // database
+       m_options_connection->m_database_name, 
+       // bucket
+       topic
+    );
+
+#endif
+
+    /*
 
     */
 
     // The persistor will handle subscription and pipeline invocation.
-    TopicPersistor::Ptr topic_persistor = std::make_shared<TopicPersistor>(
+    MessageStreamRecorder::Ptr topic_persistor = std::make_shared<MessageStreamRecorder>(
         // options_recorder
         m_option_recorder,
         // pipeline
         pipeline_stages,
         // persistor
         writeback_persistor,
+        // stream_handler
+        stream_handler,
         // node_handle 
         m_system_node_handle, 
         // topic
         topic
     );
 
-    // std::make_pair<std::string, TopicPersistor::Ptr>(std::move(topic), persistor)
     m_persistors.insert({{topic, topic_persistor}});
 
     /*

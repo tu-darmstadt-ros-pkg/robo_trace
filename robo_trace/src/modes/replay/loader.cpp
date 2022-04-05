@@ -14,6 +14,7 @@
 // Project
 #include "robo_trace/util/smart_ptr_conversions.hpp"
 #include "robo_trace/storage/connector.hpp"
+#include "robo_trace/storage/stream.hpp"
 #include "robo_trace/processing/context.hpp"
 
 
@@ -26,9 +27,20 @@ MessageLoader::MessageLoader(const std::string& collection, const std::string& d
   m_execution_pending(false), m_flush_pending(false), m_terminal(false),
   m_message_queue_size(0), m_time_last_batch_end(-1) {
       
+    m_stream_handler = std::make_shared<robo_trace::store::StreamHandler>(
+        // database
+        m_database,
+        // bucket
+#ifdef PERSISTOR_USE_UNIQUE_BUCKET
+        PERSISTOR_GLOBAL_BUCKET_NAME
+#else
+        m_collection
+#endif
+    );
+
     // We can not schedule the first invocation of the loader here, as a context switch might
     // call the loader before the construction is completed!
-    
+
 }
    
 MessageLoader::~MessageLoader() {
@@ -237,24 +249,6 @@ ros::CallbackInterface::CallResult MessageLoader::call() {
         options_query
     );
 
-/*
-    std::unique_ptr<mongo::DBClientCursor> message_cursor = m_connection->query(
-        // ns
-        m_collection_path, 
-        // query
-        query,
-        // nToReturn
-        m_deserialization_buffering_batch_size,
-        // nToSkip
-        0,
-        // fieldsToReturn
-        0,
-        // queryOptions
-        0,
-        // batchSize
-        m_query_buffering_batch_size
-    );
-*/
     size_t message_idx = 0;
     
     for(mongocxx::cursor::iterator iterator = result.begin(); iterator != result.end(); ++iterator) {
@@ -304,7 +298,12 @@ void MessageLoader::digest(const bsoncxx::document::view& serialized_message) {
 
     const bsoncxx::document::view message_serialized = serialized_message["message"].get_document().view();
     
-    const robo_trace::processing::Context::Ptr context = std::make_shared<robo_trace::processing::Context>(metadata_container);
+    const robo_trace::processing::Context::Ptr context = std::make_shared<robo_trace::processing::Context>(
+        // metadata
+        metadata_container,
+        // stream
+        m_stream_handler
+    );
     context->setBsonMessage(message_serialized);
 
     /*

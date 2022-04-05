@@ -1,9 +1,6 @@
 #include <openssl/evp.h>
 #include <openssl/rand.h>
 
-static const unsigned int KEY_SIZE = 32;
-static const unsigned int BLOCK_SIZE = 16;
-
 template <typename T>
 struct zallocator {
 

@@ -4,6 +4,7 @@
 #include <string>
 #include <memory>
 // Project
+#include "robo_trace/parameters.hpp"
 #include "robo_trace/storage/container.hpp"
 #include "robo_trace/storage/connector.hpp"
 #include "robo_trace/storage/persistor.hpp"

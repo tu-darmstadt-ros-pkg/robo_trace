@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+
+<launch>
+
+    <arg name="downsampling_value" default="1.0" />
+    <arg name="general_pipeline_priority" default="0" />
+
+    <!-- Load in the configuration. -->
+    <rosparam command="load" file="$(find robo_trace)/cfg/cfg_exp_b.yaml" subst_value="true"/>
+
+    <param name="/robo_trace/stages/downsampling/targets/capture_every_x/value" type="double" value="$(arg downsampling_value)" /> 
+    <param name="/robo_trace/pipelines/general/priority" type="int" value="$(arg general_pipeline_priority)" />
+
+</launch>

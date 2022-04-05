@@ -5,7 +5,11 @@
 #include <mongocxx/client.hpp>
 #include <mongocxx/database.hpp>
 #include <mongocxx/collection.hpp>
+#include <mongocxx/gridfs/bucket.hpp>
+#include <mongocxx/gridfs/uploader.hpp>
+#include <mongocxx/result/gridfs/upload.hpp>
 // Project
+#include "robo_trace/parameters.hpp"
 #include "robo_trace/storage/connector.hpp"
 
 
@@ -13,7 +17,7 @@ namespace robo_trace::store {
 
 Persistor::Persistor(const std::string& database, const std::string& collection)
 : m_database(database), m_collection(collection) {
-    //
+
 };
 
 Persistor::~Persistor() = default;
@@ -38,6 +42,7 @@ void Persistor::setup() {
         throw std::runtime_error("Collection already present for '" + m_collection + "'!");
 #endif
     }
+    
 }
 
 void Persistor::setIndex(const std::string& field, const bool unique) {
@@ -55,6 +60,10 @@ void Persistor::setIndex(const std::string& field, const bool unique) {
         collection_index_options
     );
 
+}
+
+void Persistor::flush() {
+    //
 }
 
 }

@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<package format="2">
+
+  <name>robo_trace_ui_adaptor</name>
+  <description>An interfacing package that handles ui related operations.</description>
+
+  <version>0.0.0</version>
+  <license>Proprietary</license>
+
+  <maintainer email="max.schmidt.11@stud.tu-darmstadt.de">Max Schmidt</maintainer>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <depend>roscpp</depend>
+  <depend>roslib</depend>
+  
+  <depend>std_msgs</depend>
+  <depend>rosgraph_msgs</depend>
+  <depend>std_srvs</depend>
+  <build_depend>message_generation</build_depend>
+  <exec_depend>message_runtime</exec_depend>
+
+  <depend>robo_trace_msgs</depend>
+
+  <export>
+  </export>
+
+</package>

@@ -11,6 +11,7 @@
 // Project
 #include "robo_trace/storage/container.hpp"
 #include "robo_trace/storage/persistor.hpp"
+#include "robo_trace/storage/stream.hpp"
 
 
 namespace robo_trace::processing {
@@ -27,17 +28,17 @@ public:
     /**
      *
      */
-    Context();
+    Context(const robo_trace::store::StreamHandler::Ptr stream);
 
     /**
      *
      */
-    Context(const robo_trace::store::Container::Ptr& metadata);
+    Context(const robo_trace::store::Container::Ptr& metadata, const robo_trace::store::StreamHandler::Ptr stream);
 
     /**
      *
      */
-    Context(const robo_trace::store::Container::Ptr& metadata, const robo_trace::store::Persistor::Ptr& persistor);
+    Context(const robo_trace::store::Container::Ptr& metadata, const robo_trace::store::Persistor::Ptr& persistor, const robo_trace::store::StreamHandler::Ptr stream);
 
     /**
      *
@@ -60,8 +61,11 @@ public:
     const robo_trace::store::Container::Ptr& getMetadata() const;
 
     /**
-     * @brief 
-     *
+     * 
+     */
+    const robo_trace::store::StreamHandler::Ptr getStreamHandler() const;
+
+    /**
      * 
      */
     bool getHasPersistor() const;
@@ -71,6 +75,7 @@ public:
      */
     const std::optional<robo_trace::store::Persistor::Ptr>& getPersistor() const;
 
+   
     /**
      *
      */
@@ -124,6 +129,8 @@ protected:
 
     /** */
     const robo_trace::store::Container::Ptr m_metadata;
+    /** */
+    const robo_trace::store::StreamHandler::Ptr m_stream_handler;
     /** */
     const std::optional<robo_trace::store::Persistor::Ptr> m_persistor;
 

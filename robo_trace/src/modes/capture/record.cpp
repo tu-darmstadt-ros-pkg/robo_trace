@@ -1,29 +1,51 @@
 // Std
 #include <signal.h>
+#include <functional>
 // ROS
 #include <ros/ros.h>
 // Project
+#include "robo_trace/parameters.hpp"
 #include "robo_trace/modes/capture/recorder.hpp"  
 
 
+std::function<void(int)> termination_callback_wrapper;
+
 void onSignal(int signal) {
-    (void) signal;
-    ros::requestShutdown();
-}  
+    termination_callback_wrapper(signal);
+}
 
 int main(int argc, char** argv) {
     
     // Init ROS.
     ros::init(argc, argv, "trace", ros::init_options::AnonymousName);
-    // Route SIGTERM interrupts to a handler for clean shutdown.
-    signal(SIGTERM, onSignal);
-
+    
     ros::NodeHandle m_system_node_handle("robo_trace");
     
     robo_trace::capture::Recorder recorder(m_system_node_handle);
-    recorder.initialize(argc, argv);
     
-    ros::AsyncSpinner spinner(8);
+    /**
+     * Setup termination signal forwarding for clean termination.
+     */
+
+    termination_callback_wrapper = std::bind(
+        &robo_trace::capture::Recorder::terminate,
+        &recorder,
+        std::placeholders::_1
+    );
+
+    struct sigaction sig_term_handler = {0};
+    sig_term_handler.sa_handler = onSignal;
+
+    sigaction(SIGTERM, &sig_term_handler, NULL);
+    sigaction(SIGINT, &sig_term_handler, NULL);
+
+    /**
+     * Start the recorder
+     */   
+
+    recorder.initialize(argc, argv);
+
+    ros::AsyncSpinner spinner(THREAD_COUNT_ROS);
     spinner.start();
 
     ros::waitForShutdown();

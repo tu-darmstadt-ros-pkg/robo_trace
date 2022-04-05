@@ -50,10 +50,7 @@ bool MessagePublisher::isCompleted() const {
 std::optional<double> MessagePublisher::getNextPublicationTime() {
     
     advance();
-    //ROS_INFO_STREAM("Message valid: " << m_next_message_valid << " - " << m_message_publisher.getTopic() 
-    //                 << " - BU: " << m_message_loader->getDeserializationBufferUtilization() 
-    //               << " - B: " << m_message_loader->isBuffering()
-    //               << " - C: " << isCompleted());
+    
     if (m_next_message_valid) {
         return m_next_message_time;
     } else {

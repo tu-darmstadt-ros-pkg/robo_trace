@@ -1,0 +1,6 @@
+# 
+string name
+string from
+string to
+---
+robo_trace_ui_adaptor/StatusIndication status

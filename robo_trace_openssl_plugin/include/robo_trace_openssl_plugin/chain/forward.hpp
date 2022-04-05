@@ -1,7 +1,12 @@
 #pragma once
 
+// Project
+#include "robo_trace_openssl_plugin/parameters.hpp"
 // Std
 #include <memory>
+#ifdef MODULE_HASH_CHAIN_FORWARD_SYNCHRONIZE
+#include <mutex>
+#endif
 // OpenSSL
 #include <openssl/evp.h>
 // Project
@@ -25,12 +30,12 @@ class HashChainForwardProcessor final : public robo_trace::processing::Processor
 public:
 
     /**
-     * TODO
+     * 
      */
     HashChainForwardProcessor(const HashChainModuleConfiguration::Ptr& configuration, const KeyManager::Ptr& key_manager, const robo_trace::store::Container::Ptr& metadata);
 
     /**
-     * TODO
+     * 
      */
     virtual ~HashChainForwardProcessor();
 
@@ -40,7 +45,7 @@ public:
     virtual robo_trace::processing::Mode getMode() const final override;
   
     /**
-     * TODO
+     * 
      */
     virtual void process(const robo_trace::processing::Context::Ptr& context) final override;
 
@@ -51,9 +56,21 @@ private:
 
     /** */
     const EVP_MD* m_hashing_method;
+
+#ifdef MODULE_HASH_CHAIN_FORWARD_REUSE_CONTEXT
     /** */
     EVP_MD_CTX* m_hashing_context;
-    
+#endif
+
+#ifdef MODULE_HASH_CHAIN_FORWARD_SYNCHRONIZE
+    /** */
+    std::mutex m_hashing_mutex;
+#endif
+
+#ifdef MODULE_HASH_CHAIN_SEQUENCE_NUMBER_ENABLE
+    int64_t m_sequence_number;
+#endif
+
     /** */
     unsigned char m_hash_buffer[EVP_MAX_MD_SIZE];
     /** */

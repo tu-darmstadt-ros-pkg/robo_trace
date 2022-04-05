@@ -1,0 +1,138 @@
+robo_trace:
+
+  capture:
+    all: true
+    # node: ""
+    regex: false
+    topics:
+      - "/rosout"
+    # exclude: ""
+    # limit: 50  
+    queue: 10000
+     
+  playback:
+    topic_prefix: "/replay"
+
+  connection:
+    host:
+      port: 27017
+      name: "localhost"
+    database:
+      name: "robo_trace"
+    collections:
+      meta: "__metadata__"
+    options:
+      timeout: 2.0
+      pool_size_min: 4
+      pool_size_max: 8 
+
+  # Pipeline configuration
+  pipelines:
+
+    # Selector for the "general" pipeline
+    general:
+      # Define a regex to match the topic agains
+      regex: '.*'
+      # Matching is done from highest to lowest priority
+      priority: 0
+      # Stage sequence for this version
+      sequence:
+        # Requires the "robo_trace_openssl_plugins" plugin to be loaded.
+        - "openssl_partial_encryption"
+        #- "openssl_full_encryption"
+        #- "downsampling"
+        # - "basic_marshaller"
+        # - "blob_decoupling"
+        - "openssl_hash_chain"
+        - "openssl_signature"
+
+  # Plugins
+  plugins:
+  
+    "RoboTraceOpenSSLPlugin":
+      # The plugins namespace, i.e. robo_trace::plugin::open_ssl::RoboTraceOpenSSLPlugin  
+      namespace: "robo_trace::plugin::open_ssl"
+
+      openssl_keys:
+        authority_public_key: |
+          -----BEGIN PUBLIC KEY-----
+          MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDFfjxnT4QK0iyzTi5sPE3FbIHK
+          x0A3VGkC7SMF6GpUbxnMGeROCN5WjxsG1BJyjqpR/ujb0iy4LB4LgDBsHL/5/sBu
+          6asOcWOZo2oYuRu0dYgJ/9P9LgO6GNFuc5E5aDNB9MnLWZ0scnEEFURp5gfRAgca
+          7XRRcBjz8H6/2L+TAwIDAQAB
+          -----END PUBLIC KEY-----
+        # Only required for playback
+        authority_private_key: |
+          -----BEGIN RSA PRIVATE KEY-----
+          MIICXQIBAAKBgQDFfjxnT4QK0iyzTi5sPE3FbIHKx0A3VGkC7SMF6GpUbxnMGeRO
+          CN5WjxsG1BJyjqpR/ujb0iy4LB4LgDBsHL/5/sBu6asOcWOZo2oYuRu0dYgJ/9P9
+          LgO6GNFuc5E5aDNB9MnLWZ0scnEEFURp5gfRAgca7XRRcBjz8H6/2L+TAwIDAQAB
+          AoGBAKe5H791bmRqPoBBA3f0dvAVyNzX/xd+XniXwEjCK5tth3EpBBWpvnmwq3lP
+          HiOgOdHNNSGLC2OWRCXsRjNq7zX5Gjw6eu8ihRdJvUhqiSagTBh3AOKt2Zr+POBQ
+          3DzTYcEZT+WNagWDKZGc8lag+ceFJaVM1cIb15vVdBc6CRiRAkEA6KI2FRNnEqCW
+          nXZfI0rasERz/QSYuwfIsupdnQjpbC3hy/WkF39T34fhH6VBN6iUF/lCHe11tG6r
+          0iGhc7ynTQJBANlUcbbIPFUqh4pvF67ZMFhhgcb5L2BkPzj+Vjfm19shu+o74LIU
+          fH7JlI5VzG1Z8jtzdRmewyVYUd1dGz0dG48CQEBjHSrqKt4Z+nXsnFptTmf5Gk1O
+          Z2NkvSTf/zcGj2y0qklEXL1wLWux9RpIJ+vaydp0z9rurWRaOU44prIc5gUCQQCf
+          4YyqcBJagSgngmTE38i+LDWCAI2G9xi/v/QDuhJwhhetURGTUJjp2Tgtohb7F2Gp
+          tN2f1HkxvxCyri08v24nAkAnJUxq/k5+uf8SctcMHvMu56Mu23pt6Osz518BFhKF
+          4F6lx+H+UABjhLKnShRosukqeXAs89a+beTtLsKmmq6K
+          -----END RSA PRIVATE KEY-----
+
+  stages:
+
+    downsampling:
+      targets:
+#        capture_every_2nd:
+#          # Match either against 'topic' or 'type' (message_type) 
+#          matching: 'topic'
+#          regex: '.*'
+#          priority: 0
+#          strategy: 'count'
+#          # Leave 3 out
+#          value: 1.0
+        capture_every_2sec:
+          # Match either against 'topic' or 'type' (message_type) 
+          matching: 'type'
+          regex: '.*Image.*'
+          priority: 1
+          strategy: 'time'
+          # Capture every 2 seconds
+          value: 1.0
+
+    openssl_hash_chain:
+      hashing_method: "SHA256"
+      result_storage_key: "hash"
+    
+    openssl_signature:
+      hashing_method: "SHA1"
+      input_store_key: "hash"
+      result_storage_key: "sig"
+
+    openssl_partial_encryption:
+      # The encryption method. AES with CBC padding.
+      encryption_method: "aes-256-cbc"
+      # Which sub messages to encrypt
+      encryption_targets: 
+        # For this message type encrypt the 'position' sub field as a whole 
+        "geometry_msgs-Pose":
+          - "position"
+        # One can also define targets more specifically.
+        # Note: the previous target does not affect this target, although Pose is a member of PoseStamped
+        "geometry_msgs-PoseStamped":
+          - "pose.position.x"
+          - "pose.position.y"
+        "sensor_msgs-Image":
+          - "height"
+          - "data"
+        "rosgraph_msgs-Log":
+          - "level"
+          - "msg"
+        # Only encrypt the image itself, but leave metadata intact.
+        # "sensor_msgs-Image":
+        #  - "data"
+        # "sensor_msgs-PointCloud2":
+        #  - "data"
+
+  
+    

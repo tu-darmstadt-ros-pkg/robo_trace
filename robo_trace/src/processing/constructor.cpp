@@ -9,18 +9,32 @@
 #include <sstream>
 #include <functional>
 // Project
+#include "robo_trace/parameters.hpp"
 #include "robo_trace/util/smart_ptr_conversions.hpp"
 #include "robo_trace/processing/modules/measurement/delegate.hpp"
 #include "robo_trace/processing/modules/marshalling/descriptor.hpp"
 #include "robo_trace/processing/modules/downsampling/descriptor.hpp"
 
+#include <iostream>
 
 namespace robo_trace::processing {
 
 
 Constructor::Constructor() = default;
 
-Constructor::~Constructor() = default;
+Constructor::~Constructor() {
+
+    // Unload all the plugins explicitly.
+    m_processing_plugins.clear();
+    // And the variant descriptions as they hold pointers to the descriptors.
+    m_pipeline_descriptors.clear();
+
+    /*
+        Note: All pointer to pluginlib loaded classes should(/must) have been freed at this point 
+              or it won't be possible to unload the classes propperly.
+    */
+
+}
 
 
 const std::vector<ProcessingVariant::Ptr>& Constructor::getProcessingVariants() const {
@@ -139,7 +153,7 @@ void Constructor::initialize(const robo_trace::store::Options::Ptr& connection_o
             for (size_t idx = 0; idx < sequence_names.size(); ++idx) {
                 
                 const std::string& stage_name = sequence_names[idx];
-                
+               
                 std::unordered_map<std::string, Descriptor::Ptr>::iterator matching_descriptors = descriptors.find(stage_name);
 
                 if (matching_descriptors == descriptors.end()) {
@@ -188,7 +202,8 @@ std::vector<Processor::Ptr> Constructor::construct(const Mode mode, const robo_t
     }
 
     const ProcessingVariant::Ptr& descriptor = m_pipeline_descriptors[pipeline_idx];
-
+    ROS_INFO_STREAM(" - " << descriptor->getName() << " (Topic: " << topic << ")");
+    
     /*
         Build the pipeline.
     */
@@ -209,9 +224,16 @@ std::vector<Processor::Ptr> Constructor::construct(const Mode mode, const robo_t
         }
 
         const Processor::Ptr stage = o_stage.value();
-        // Measure execution time.
-        const PerformanceMeasuringProcessorDelegate::Ptr measurement_delegate = std::make_shared<PerformanceMeasuringProcessorDelegate>(stage_descriptor, stage);
-        pipeline.push_back(measurement_delegate);
+
+#ifdef EVALUATION_CAPTURE_PIPELINE_TIMINGS
+        if (mode == Mode::CAPTURE) {
+            pipeline.push_back(std::make_shared<PerformanceMeasuringProcessorDelegate>(stage_descriptor, stage));
+        } else {  
+            pipeline.push_back(stage);  
+        }  
+#else
+        pipeline.push_back(stage);
+#endif 
        
     }
 

@@ -5,6 +5,7 @@
 // MongoCXX
 #include <bsoncxx/document/value.hpp>
 
+
 namespace robo_trace::store {
 
 class Persistor {
@@ -47,6 +48,11 @@ public:
      *
      */
     void setIndex(const std::string& field, const bool unique);
+
+    /**
+     *
+     */
+    virtual void flush();
 
     /**
      *

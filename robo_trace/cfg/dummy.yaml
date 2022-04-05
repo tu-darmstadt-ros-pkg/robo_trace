@@ -1,13 +1,14 @@
 robo_trace:
 
-#  capture:
-#    all: true
-#    # node: ""
-#    regex: false
-#    topics:
-#      - "/rosout"
-#    # exclude: ""
-#    # limit: 50  
+  capture:
+    all: true
+    # node: ""
+    regex: false
+    topics:
+      - "/rosout"
+    # exclude: ""
+    # limit: 50  
+    queue: 10000
      
   playback:
     topic_prefix: "/replay"

@@ -10,11 +10,19 @@
 #include <ros_babel_fish/generation/message_template.h>
 #include <ros_babel_fish/generation/description_provider.h> 
 // Project
-#include <robo_trace/processing/processor.hpp>
+#include "robo_trace/storage/stream.hpp"
+#include "robo_trace/processing/processor.hpp"
 #include "robo_trace_openssl_plugin/parameters.hpp"
 #include "robo_trace_openssl_plugin/key_manager.hpp"
 #include "robo_trace_openssl_plugin/encryption/partial/configuration.hpp"
 
+#define COMMA ,
+
+#ifdef MODULE_PARTIAL_ENCRYPTION_OFFLOAD_ENCRYPTED_BLOBS
+#define MODULE_PARTIAL_ENCRYPTION_INSERT_ON_OFFLOADING(insert) insert
+#else
+#define MODULE_PARTIAL_ENCRYPTION_INSERT_ON_OFFLOADING(insert)
+#endif
 
 namespace robo_trace::plugin::open_ssl {
 
@@ -44,27 +52,21 @@ public:
     virtual robo_trace::processing::Mode getMode() const final override;
   
     /**
-     * TODO
+     * 
      */
     virtual void process(const robo_trace::processing::Context::Ptr& context) final override;
 
 private:
 
-#ifdef MODULE_PARTIAL_ENCRYPTION_FORWARD_VALIDATE_BYTES
-    template<bool DoSerialization>
-    void serialize(const ros_babel_fish::MessageTemplate::ConstPtr& msg_template, bsoncxx::builder::basic::sub_document& builder, const uint8_t* stream, size_t& bytes_read, PartialEncryptionModuleConfiguration::EncryptionTarget::Ptr encryption_tree);
-#else
-    template<bool DoSerialization>
-    void serialize(const ros_babel_fish::MessageTemplate::ConstPtr& msg_template, bsoncxx::builder::basic::sub_document& builder, const uint8_t** stream, PartialEncryptionModuleConfiguration::EncryptionTarget::Ptr encryption_tree);
-#endif
+    /**
+     * 
+     */
+    void serialize(const ros_babel_fish::MessageTemplate::ConstPtr& msg_template, bsoncxx::builder::basic::sub_document& builder, const uint8_t** stream, PartialEncryptionModuleConfiguration::EncryptionTarget::Ptr encryption_tree MODULE_PARTIAL_ENCRYPTION_INSERT_ON_OFFLOADING(COMMA const robo_trace::store::StreamHandler::Ptr& stream_handler));
 
-#ifdef MODULE_PARTIAL_ENCRYPTION_FORWARD_VALIDATE_BYTES
-    template<bool DoSerialization>
-    void serialize(const ros_babel_fish::MessageTemplate::ConstPtr& msg_template, const std::string& name, bsoncxx::builder::basic::sub_document& builder, const uint8_t* stream, size_t& bytes_read, PartialEncryptionModuleConfiguration::EncryptionTarget::Ptr encryption_tree);
-#else
-    template<bool DoSerialization>
-    void serialize(const ros_babel_fish::MessageTemplate::ConstPtr& msg_template, const std::string& name, bsoncxx::builder::basic::sub_document& builder, const uint8_t**, PartialEncryptionModuleConfiguration::EncryptionTarget::Ptr encryption_tree);
-#endif
+    /**
+     * 
+     */
+    void serialize(const ros_babel_fish::MessageTemplate::ConstPtr& msg_template, const std::string& name, bsoncxx::builder::basic::sub_document& builder, const uint8_t** stream, PartialEncryptionModuleConfiguration::EncryptionTarget::Ptr encryption_tree MODULE_PARTIAL_ENCRYPTION_INSERT_ON_OFFLOADING(COMMA const robo_trace::store::StreamHandler::Ptr& stream_handler));
 
 private:
 

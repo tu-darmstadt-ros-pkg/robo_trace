@@ -4,6 +4,7 @@
 // OpenSSL
 #include <openssl/evp.h>
 // Project
+#include "robo_trace_openssl_plugin/parameters.hpp"
 #include "robo_trace/processing/processor.hpp"
 #include "robo_trace_openssl_plugin/key_manager.hpp"
 #include "robo_trace_openssl_plugin/chain/configuration.hpp"
@@ -44,7 +45,11 @@ private:
     const EVP_MD* m_hashing_method;
     /** */
     EVP_MD_CTX* m_hashing_context;
-    
+
+#ifdef MODULE_HASH_CHAIN_SEQUENCE_NUMBER_ENABLE
+    int64_t m_sequence_number;
+#endif
+
     /** */
     unsigned char m_hash_buffer[EVP_MAX_MD_SIZE];
     /** */

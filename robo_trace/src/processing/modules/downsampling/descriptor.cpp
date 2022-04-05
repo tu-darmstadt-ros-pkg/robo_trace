@@ -125,6 +125,7 @@ std::optional<Processor::Ptr> DownsamplingModuleDescriptor::getStage(const robo_
     }
 
     const DownsamplingMode::Ptr& downsampling_mode = m_downsampling_modes[mode_idx];
+    ROS_INFO_STREAM(" Downsapling is at " << downsampling_mode->getValue() << " (Topic: " << summary->getString("topic") << ")");
 
     switch(downsampling_mode->getDownsamplingStrategy()) {
         case DownsamplingMode::Strategy::COUNT : {

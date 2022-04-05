@@ -4,21 +4,23 @@
 
 namespace robo_trace::processing {
 
-Context::Context()
-: Context(std::make_shared<robo_trace::store::Container>()) {
+Context::Context(const robo_trace::store::StreamHandler::Ptr stream)
+: Context(std::make_shared<robo_trace::store::Container>(), stream) {
     //
 }
 
-Context::Context(const robo_trace::store::Container::Ptr& metadata)
+Context::Context(const robo_trace::store::Container::Ptr& metadata, const robo_trace::store::StreamHandler::Ptr stream)
 : m_metadata(metadata),
   m_persistor({}),
+  m_stream_handler(stream),
   m_terminated(false) {
     //
 }
 
-Context::Context(const robo_trace::store::Container::Ptr& metadata, const robo_trace::store::Persistor::Ptr& persistor)
+Context::Context(const robo_trace::store::Container::Ptr& metadata, const robo_trace::store::Persistor::Ptr& persistor, const robo_trace::store::StreamHandler::Ptr stream)
 : m_metadata(metadata),
   m_persistor(persistor),
+  m_stream_handler(stream),
   m_terminated(false) {
     //
 }
@@ -27,6 +29,10 @@ Context::~Context() = default;
 
 const robo_trace::store::Container::Ptr& Context::getMetadata() const {
     return m_metadata;
+}
+
+const robo_trace::store::StreamHandler::Ptr Context::getStreamHandler() const {
+    return m_stream_handler;
 }
 
 bool Context::isTerminated() const {

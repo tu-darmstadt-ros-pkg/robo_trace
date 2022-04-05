@@ -68,18 +68,38 @@ bool Container::getBool(const std::string& name) {
 }
 
 
-void Container::append(const std::string& name, int val) {
+void Container::append(const std::string& name, int32_t val) {
     m_builder.append(bsoncxx::builder::basic::kvp(name, val));
     m_read_view_dirty = true;
 }
 
-int Container::getInt(const std::string& name) {
+int32_t Container::getInt32(const std::string& name) {
 
     if (m_read_view_dirty) {
         synchronize();
     }
 
     return m_read_view[name].get_int32();
+}
+
+
+void Container::append(const std::string& name, int64_t val) {
+  
+    bsoncxx::types::b_int64 wrapper;
+    wrapper.value = val;
+
+    m_builder.append(bsoncxx::builder::basic::kvp(name, wrapper));
+    m_read_view_dirty = true;
+}
+    
+int64_t Container::getInt64(const std::string& name) {
+    
+    if (m_read_view_dirty) {
+        synchronize();
+    }
+
+    return m_read_view[name].get_int64();
+
 }
 
 

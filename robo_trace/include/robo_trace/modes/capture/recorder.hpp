@@ -4,8 +4,10 @@
 #include <ros/ros.h>
 #include <ros/callback_queue.h>
 // Project
+#include "robo_trace/parameters.hpp"
 #include "robo_trace/storage/options.hpp"
 #include "robo_trace/storage/persistor.hpp"
+#include "robo_trace/storage/stream.hpp"
 #include "robo_trace/processing/constructor.hpp"
 #include "robo_trace/processing/descriptor.hpp"
 #include "robo_trace/modes/capture/options.hpp"
@@ -32,6 +34,11 @@ public:
      * 
      */
     void initialize(int argc, char** argv);
+
+    /**
+     * 
+     */
+    void terminate(int signal);
 
 private:
    
@@ -73,8 +80,13 @@ private:
     /** */
     robo_trace::store::Persistor::Ptr m_persistor_metadata;
 
+#ifdef PERSISTOR_USE_UNIQUE_BUCKET
     /** */
-    std::unordered_map<std::string, TopicPersistor::Ptr> m_persistors;
+    robo_trace::store::StreamHandler::Ptr m_stream_handler;
+#endif
+
+    /** */
+    std::unordered_map<std::string, MessageStreamRecorder::Ptr> m_persistors;
 
 
 };

@@ -41,9 +41,14 @@ public:
     bool getBool(const std::string& name);
 
 
-    void append(const std::string& name, int val);
+    void append(const std::string& name, int32_t val);
     
-    int getInt(const std::string& name);
+    int32_t getInt32(const std::string& name);
+
+
+    void append(const std::string& name, int64_t val);
+    
+    int64_t getInt64(const std::string& name);
 
 
     void append(const std::string& name, double val);

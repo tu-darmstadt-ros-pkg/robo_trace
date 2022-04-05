@@ -3,6 +3,6 @@
 <launch>
 
     <!-- Load in the configuration. -->
-    <rosparam command="load" file="$(find robo_trace)/cfg/example_cfg.yaml" subst_value="true"/>
+    <rosparam command="load" file="$(find robo_trace)/cfg/cfg_exp_a.yaml" subst_value="true"/>
 
 </launch>

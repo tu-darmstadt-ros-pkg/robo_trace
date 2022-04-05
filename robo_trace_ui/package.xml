@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<package format="2">
+
+  <name>robo_trace_ui</name>
+  <description>The robo_trace_ui package</description>
+
+  <version>0.0.0</version>
+  <license>Proprietary</license>
+
+  <maintainer email="max.schmidt.11@stud.tu-darmstadt.de">Max Schmidt</maintainer>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <depend>hector_rviz_overlay</depend> 
+  <exec_depend>rviz</exec_depend>
+
+  <export>
+    <rviz plugin="${prefix}/plugin_description.xml"/>
+  </export>
+
+</package>

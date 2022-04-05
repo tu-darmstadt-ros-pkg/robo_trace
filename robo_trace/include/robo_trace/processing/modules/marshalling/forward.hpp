@@ -37,13 +37,6 @@ public:
 
 private:
 
-    /**
-     * 
-     */
-    static void serialize(const ros_babel_fish::MessageTemplate::ConstPtr& msg_template, bsoncxx::builder::basic::sub_document& builder, const uint8_t* stream, size_t& bytes_read);
-
-private:
-
     /** */
     ros_babel_fish::MessageTemplate::ConstPtr m_message_template;
 

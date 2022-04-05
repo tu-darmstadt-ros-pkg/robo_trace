@@ -1,0 +1,7 @@
+<library path="librobo_trace_ui">
+    <class name="robo_trace_ui_display/RoboTraceUiDisplay" type="robo_trace_ui::RoboTraceUiDisplay" base_class_type="rviz::Display">
+        <description>
+            RoboTrace RViz Overlay.
+        </description>
+    </class>
+</library>

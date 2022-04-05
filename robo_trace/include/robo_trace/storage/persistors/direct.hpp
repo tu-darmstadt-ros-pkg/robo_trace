@@ -4,6 +4,7 @@
 // MongoCXX
 #include <mongocxx/options/insert.hpp>
 // Project
+#include "robo_trace/parameters.hpp"
 #include "robo_trace/storage/persistor.hpp"
 
 
@@ -32,7 +33,7 @@ private:
 
     /** */
     mongocxx::options::insert m_insert_option;
-
+    
 };
 
 }

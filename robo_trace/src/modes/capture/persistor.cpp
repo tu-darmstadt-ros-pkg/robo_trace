@@ -1,19 +1,25 @@
 // Base
 #include "robo_trace/modes/capture/persistor.hpp"
+// Std
+#ifdef EVALUATION_CAPTURE_COURSE_TIMINIGS
+#include <chrono>
+#endif
+// Ros
+#ifdef RECORDING_SIGNAL_PIPELINE_PASS
+#include <std_msgs/Empty.h>
+#endif
 // Project
 #include "robo_trace/util/smart_ptr_conversions.hpp"
 #include "robo_trace/storage/container.hpp"
 #include "robo_trace/processing/context.hpp"
 
-#ifdef RECORDING_SIGNAL_PIPELINE_PASS
-#include "std_msgs/Empty.h"
-#endif
+
 
 
 namespace robo_trace::capture {  
 
-TopicPersistor::TopicPersistor(const Options::ConstPtr options_recorder, const std::vector<robo_trace::processing::Processor::Ptr>& pipeline, const robo_trace::store::Persistor::Ptr persistor, ros::NodeHandle& node_handle, const std::string& topic)
-:  m_topic(topic), m_options_recorder(options_recorder), m_node_handle(node_handle), m_pipeline(pipeline), m_persistor(persistor) {
+MessageStreamRecorder::MessageStreamRecorder(const Options::ConstPtr options_recorder, const std::vector<robo_trace::processing::Processor::Ptr>& pipeline, const robo_trace::store::Persistor::Ptr persistor, const robo_trace::store::StreamHandler::Ptr stream, ros::NodeHandle& node_handle, const std::string& topic)
+:  m_topic(topic), m_options_recorder(options_recorder), m_node_handle(node_handle), m_pipeline(pipeline), m_persistor(persistor), m_stream_handler(stream) {
     
 #ifdef RECORDING_SIGNAL_PIPELINE_PASS
     const std::string signal_pipeline_pass_topic_name = ros::names::append(RECORDING_SIGNAL_PIPELINE_PASS_TOPIC_PREFIX, topic);
@@ -22,21 +28,21 @@ TopicPersistor::TopicPersistor(const Options::ConstPtr options_recorder, const s
 
 }
 
-TopicPersistor::~TopicPersistor() = default;
+MessageStreamRecorder::~MessageStreamRecorder() = default;
 
-const std::string& TopicPersistor::getTopic() const {
+const std::string& MessageStreamRecorder::getTopic() const {
     return m_topic;
 }
 
-const std::vector<robo_trace::processing::Processor::Ptr>& TopicPersistor::getPipeline() const {
+const std::vector<robo_trace::processing::Processor::Ptr>& MessageStreamRecorder::getPipeline() const {
     return m_pipeline;
 }
 
-ros::NodeHandle& TopicPersistor::getNodeHandle() {
+ros::NodeHandle& MessageStreamRecorder::getNodeHandle() {
     return m_node_handle;
 }
 
-void TopicPersistor::start() {
+void MessageStreamRecorder::start() {
     
     if (m_subscriber_active) {
         return;
@@ -48,7 +54,7 @@ void TopicPersistor::start() {
         // queue_size
         m_options_recorder->m_capture_subscriber_queue_size, 
         // fp
-        &TopicPersistor::process, 
+        &MessageStreamRecorder::process, 
         // obj
         this,
         // transport_hints
@@ -58,7 +64,7 @@ void TopicPersistor::start() {
     m_subscriber_active = true;
 }
 
-void TopicPersistor::stop() {
+void MessageStreamRecorder::stop() {
     
     if (!m_subscriber_active) {
         return;
@@ -69,13 +75,21 @@ void TopicPersistor::stop() {
     
 }
 
-void TopicPersistor::process(const ros::MessageEvent<const ros_babel_fish::BabelFishMessage>& event) {
-    
-    m_messages_received_local += 1;
-    // m_messages_received_total += 1;
+void MessageStreamRecorder::flush() {
+    // TODO:
+    m_persistor->flush();
+}
 
+void MessageStreamRecorder::process(const ros::MessageEvent<const ros_babel_fish::BabelFishMessage>& event) {
+     
     robo_trace::store::Container::Ptr metadata_container = std::make_shared<robo_trace::store::Container>();
-    
+
+#ifdef EVALUATION_CAPTURE_COURSE_TIMINIGS
+    metadata_container->getContainer("stamps")->append("ingress", static_cast<int64_t>(
+        std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count()
+    ));
+#endif
+   
     // Nice... Technically, we could get all the topic here from the connectio header...
     // ROS_INFO_STREAM("Def: " << event.getConnectionHeader()["message_definition"]);
 
@@ -93,10 +107,12 @@ void TopicPersistor::process(const ros::MessageEvent<const ros_babel_fish::Babel
         // metadata
         metadata_container,
         // persistor
-        m_persistor
+        m_persistor,
+        // stream_handler
+        m_stream_handler
     );
     context->setRosMessage(msg);
-    
+ 
     for (const robo_trace::processing::Processor::Ptr& processing_stage : m_pipeline) {
         
         processing_stage->process(context);
@@ -107,11 +123,13 @@ void TopicPersistor::process(const ros::MessageEvent<const ros_babel_fish::Babel
 
     }
 
+
 #ifdef RECORDING_SIGNAL_PIPELINE_PASS
     const std_msgs::Empty pipeline_pass_signal;
     m_publisher_signal_pipeline_pass.publish(pipeline_pass_signal);
 #endif
-   
+
+
 }
 
 } 

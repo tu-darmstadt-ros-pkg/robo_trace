@@ -1,9 +1,17 @@
 #pragma once
 
+// Whether to offload encrypted binary bload into gridfs buckets. 
+// NOTE: This is a work in progress and currently, only serialization is implemented.
+// #define MODULE_PARTIAL_ENCRYPTION_OFFLOAD_ENCRYPTED_BLOBS
 
-// Whether to check if all bytes have been consumed after comined encryption and serialization
-// #define MODULE_PARTIAL_ENCRYPTION_FORWARD_VALIDATE_BYTES
-
+// If enabled, the forward hash chain module will synchronize access to shared resources.
+// #define MODULE_HASH_CHAIN_FORWARD_CONCURRENT
+// If enabled, a single OpenSSL will allocated and reused for the forward hash chain module. 
+#define MODULE_HASH_CHAIN_FORWARD_REUSE_CONTEXT
+// If enabled, a hashing squence number will be added to each message. 
+// #define MODULE_HASH_CHAIN_SEQUENCE_NUMBER_ENABLE
+// The key for storing the sequence number under.
+#define MODULE_HASH_CHAIN_SEQUENCE_NUMBER_KEY "hash_sequence_number"
 
 // ############# Ros param related definitions #############
 

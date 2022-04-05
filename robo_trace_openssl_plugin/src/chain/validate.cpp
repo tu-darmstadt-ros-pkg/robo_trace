@@ -12,7 +12,11 @@ namespace robo_trace::plugin::open_ssl {
 
 HashChainValidationProcessor::HashChainValidationProcessor(const HashChainModuleConfiguration::Ptr& configuration, const KeyManager::Ptr& key_manager, const robo_trace::store::Container::Ptr& data) 
 : m_configuration(configuration) {
-    
+
+#ifdef MODULE_HASH_CHAIN_SEQUENCE_NUMBER_ENABLE
+    m_sequence_number = 0;
+#endif
+
     m_hashing_context = EVP_MD_CTX_new();
     
     if (m_hashing_context == nullptr) {
@@ -63,6 +67,18 @@ robo_trace::processing::Mode HashChainValidationProcessor::getMode() const {
 
 void HashChainValidationProcessor::process(const robo_trace::processing::Context::Ptr& context) {
 
+#ifdef MODULE_HASH_CHAIN_SEQUENCE_NUMBER_ENABLE
+   
+    const int64_t sequence_number = context->getMetadata()->getInt64(MODULE_HASH_CHAIN_SEQUENCE_NUMBER_KEY);
+
+    if ((m_sequence_number + 1) != sequence_number) {
+        context->setTerminated();
+    }
+
+    m_sequence_number = sequence_number;
+
+#endif
+
     if (!EVP_DigestInit_ex(m_hashing_context, m_hashing_method, nullptr)) {
         throw std::runtime_error("Failed to initialize hashing context!");
     }
@@ -98,12 +114,12 @@ void HashChainValidationProcessor::process(const robo_trace::processing::Context
 
     // TODO:
     if (m_hash_buffer_length != expected_hash_length) {
-        //context->setStatus(MessageProcessingContext::Status::INVALID, "Message hash missmatch.");
+        context->setTerminated();
     } else {
 
         for (size_t idx = 0; idx < expected_hash_length; ++idx) {
             if (expected_hash_data[idx] != m_hash_buffer[idx]) {
-                //context->setStatus(MessageProcessingContext::Status::INVALID, "Message hash missmatch.");
+                context->setTerminated();
                 break;
             }
         }

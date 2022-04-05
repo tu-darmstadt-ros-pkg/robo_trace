@@ -39,13 +39,6 @@ public:
 
 private:
 
-    /**
-     * 
-     */
-    void deserialize(const ros_babel_fish::MessageTemplate::ConstPtr& msg_template, const bsoncxx::document::view& serialized, ros_babel_fish::CompoundMessage& deserialized);
-
-private:
-
     /** */
     ros_babel_fish::MessageDescription::ConstPtr m_message_description;
 

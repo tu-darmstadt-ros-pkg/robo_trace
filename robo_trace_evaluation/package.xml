@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<package format="2">
+
+  <name>robo_trace_evaluation</name>
+  <description>A package, containing utilities to evaluate RoboTrace.</description>
+
+  <version>0.0.0</version>
+  <license>TODO</license>
+
+  <maintainer email="max.schmidt.11@stud.tu-darmstadt.de">Max Schmidt</maintainer> 
+  <author email="max.schmidt.11@stud.tu-darmstadt.de">Max Schmidt</author>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <build_depend>rospy</build_depend>
+  <build_depend>std_msgs</build_depend>
+
+  <export>
+  </export>
+
+</package>

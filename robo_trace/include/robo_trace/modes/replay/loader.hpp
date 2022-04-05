@@ -146,6 +146,8 @@ private:
     const std::optional<bsoncxx::document::value> m_query_structure; 
    
     /** */
+    robo_trace::store::StreamHandler::Ptr m_stream_handler;
+    /** */
     const std::vector<robo_trace::processing::Processor::Ptr> m_processing_pipeline;
    
     /** */
