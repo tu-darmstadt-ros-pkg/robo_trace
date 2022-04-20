@@ -22,5 +22,6 @@ repos:
                 "-o", "Fachgebiet Simulation, Systemoptimierung und Robotik, TU Darmstadt",
                 "-n", "RoboTrace",
                 "-u", "https://github.com/tu-darmstadt-ros-pkg/robo_trace",
+                "-x", "*.md",
                 "-f"
             ]
