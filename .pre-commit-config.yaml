@@ -1,0 +1,26 @@
+##
+## Copyright (c) 2022 Fachgebiet Simulation, Systemoptimierung und Robotik, TU Darmstadt.
+##
+## This file is part of RoboTrace
+## (see https://github.com/tu-darmstadt-ros-pkg/robo_trace) 
+## and is governed by a BSD-style license 
+## that can be found in the LICENSE file.
+##
+
+# See https://pre-commit.com for more information
+repos:
+    - repo: https://github.com/johann-petrak/licenseheaders.git
+      rev: 'v0.8.8'
+      hooks:
+          - id: licenseheaders
+            verbose: true
+            args: [
+                #  "--dry", 
+                "-v",
+                "-t", "LicenseHeader.tmpl", 
+                "-cy", 
+                "-o", "Fachgebiet Simulation, Systemoptimierung und Robotik, TU Darmstadt",
+                "-n", "RoboTrace",
+                "-u", "https://github.com/tu-darmstadt-ros-pkg/robo_trace",
+                "-f"
+            ]
