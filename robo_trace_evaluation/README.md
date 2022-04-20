@@ -1,5 +1,5 @@
 # RoboTrace Evaluation
-This repository contains the source for evaluating RoboTrace.
+This repository contains the source files for evaluating RoboTrace.
 
 ## Dependencies And Setup
 As stated in the main repository, RoboTrace was developed for ROS `melodic`. Consequently, it is also mandatory  running this evaluation code. Besides this, the following additional dependecies must be also installed:
